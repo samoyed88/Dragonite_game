@@ -129,7 +129,7 @@ nav {
   width: 100%;
   margin-top: 4px;
   display: grid;
-  grid-template-columns: repeat(10, 1fr);
+  grid-template-columns: repeat(11, 1fr);
   gap: 2px;
 }
 
@@ -174,6 +174,66 @@ nav {
   margin: 14px 0 8px;
   font-size: 0.54rem;
   color: var(--gb-mid-dark);
+}
+
+.map-hud {
+  width: 100%;
+  border: 3px solid var(--gb-dark);
+  background: #b7cd38;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.map-location-title {
+  margin: 0;
+  font-size: 0.65rem;
+  line-height: 1.5;
+}
+
+.map-location-meta {
+  margin: 6px 0 0;
+  font-size: 0.5rem;
+  color: var(--gb-mid-dark);
+}
+
+.encounter-panel {
+  width: 100%;
+  border: 3px solid var(--gb-dark);
+  background: #b7cd38;
+  padding: 8px;
+}
+
+.encounter-title {
+  margin: 0 0 8px;
+  font-size: 0.5rem;
+  color: var(--gb-mid-dark);
+}
+
+.encounter-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.encounter-card {
+  border: 2px solid var(--gb-dark);
+  background: #d6e275;
+  padding: 6px 4px;
+  text-align: center;
+}
+
+.encounter-card img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.encounter-name {
+  margin: 4px 0 0;
+  font-size: 0.45rem;
+  line-height: 1.4;
+  text-transform: capitalize;
 }
 
 @media (max-width: 480px) {

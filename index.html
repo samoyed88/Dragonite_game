@@ -52,8 +52,16 @@
           aria-hidden="true"
         >
           <p class="story-tag">世界地圖</p>
-          <div id="mapGrid" class="map-grid" aria-live="polite"></div>
-          <p id="mapHint" class="map-hint">↑↓←→ 移動快龍</p>
+          <section class="map-hud" aria-label="地圖資訊">
+            <p id="locationTitle" class="map-location-title">真新鎮</p>
+            <p id="locationMeta" class="map-location-meta">座標 (1, 6)・城鎮</p>
+          </section>
+          <div id="mapGrid" class="map-grid" aria-live="polite" aria-label="世界地圖視窗"></div>
+          <p id="mapHint" class="map-hint">↑↓←→ 移動快龍　Enter / Space 探索</p>
+          <section class="encounter-panel" aria-label="附近寶可夢">
+            <p class="encounter-title">附近夥伴候選（PokéAPI）</p>
+            <div id="encounterList" class="encounter-list"></div>
+          </section>
           <p id="mapStatus" class="status">你站在 1 號道路，旅程正式開始！</p>
         </section>
       </section>
