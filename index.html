@@ -51,18 +51,26 @@
           aria-label="世界地圖探索"
           aria-hidden="true"
         >
-          <p class="story-tag">世界地圖</p>
+          <p class="story-tag">開放世界</p>
           <section class="map-hud" aria-label="地圖資訊">
             <p id="locationTitle" class="map-location-title">真新鎮</p>
-            <p id="locationMeta" class="map-location-meta">座標 (1, 6)・城鎮</p>
+            <p id="locationMeta" class="map-location-meta">座標 (260, 980)・城鎮</p>
           </section>
-          <div id="mapGrid" class="map-grid" aria-live="polite" aria-label="世界地圖視窗"></div>
-          <p id="mapHint" class="map-hint">↑↓←→ 移動快龍　Enter / Space 探索</p>
+          <div id="mapViewport" class="map-viewport" aria-live="polite" aria-label="世界地圖視窗">
+            <div id="mapWorld" class="map-world">
+              <div id="roadsLayer" class="roads-layer"></div>
+              <div id="landmarksLayer" class="landmarks-layer"></div>
+              <div id="player" class="player">
+                <img id="playerSprite" alt="快龍" loading="lazy" />
+              </div>
+            </div>
+          </div>
+          <p id="mapHint" class="map-hint">長按 ↑↓←→ 連續移動快龍　Enter / Space 探索</p>
           <section class="encounter-panel" aria-label="附近寶可夢">
             <p class="encounter-title">附近夥伴候選（PokéAPI）</p>
             <div id="encounterList" class="encounter-list"></div>
           </section>
-          <p id="mapStatus" class="status">你站在 1 號道路，旅程正式開始！</p>
+          <p id="mapStatus" class="status">你站在真新鎮，旅程正式開始！</p>
         </section>
       </section>
     </main>
