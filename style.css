@@ -125,6 +125,57 @@ nav {
   color: var(--gb-mid-dark);
 }
 
+.map-grid {
+  width: 100%;
+  margin-top: 4px;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 2px;
+}
+
+.map-tile {
+  aspect-ratio: 1 / 1;
+  border: 2px solid var(--gb-dark);
+  display: grid;
+  place-items: center;
+  font-size: 0.56rem;
+  line-height: 1;
+}
+
+.tile-grass {
+  background: #8db81a;
+}
+
+.tile-route {
+  background: #afc53a;
+}
+
+.tile-town {
+  background: #d6e275;
+}
+
+.tile-gym {
+  background: #6f9224;
+  color: var(--gb-light);
+}
+
+.tile-blocked {
+  background: #4f6e16;
+  color: #89a44f;
+}
+
+.tile-player {
+  outline: 3px solid var(--gb-dark);
+  outline-offset: -3px;
+  font-weight: 700;
+}
+
+.map-hint {
+  margin: 14px 0 8px;
+  font-size: 0.54rem;
+  color: var(--gb-mid-dark);
+}
+
 @media (max-width: 480px) {
   .console {
     padding: 16px;
