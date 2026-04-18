@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>快龍的道館挑戰</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="console">
+      <section class="screen" aria-label="遊戲主選單">
+        <h1 class="title">快龍的道館挑戰</h1>
+        <p class="subtitle">DRAGONITE QUEST</p>
+
+        <nav aria-label="主選單選項">
+          <button class="menu-item is-selected" data-action="new" type="button">
+            開始新遊戲
+          </button>
+          <button class="menu-item" data-action="load" type="button">
+            讀取進度
+          </button>
+        </nav>
+
+        <p id="statusText" class="status" role="status" aria-live="polite">
+          ↑↓ 選擇　Enter 確認
+        </p>
+      </section>
+    </main>
+
+    <script src="./main.js"></script>
+  </body>
+</html>
