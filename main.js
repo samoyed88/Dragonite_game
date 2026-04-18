@@ -1,7 +1,29 @@
 const SAVE_KEY = "dragonite-game-save";
 const menuItems = Array.from(document.querySelectorAll(".menu-item"));
 const statusText = document.getElementById("statusText");
+const menuScene = document.getElementById("menuScene");
+const storyScene = document.getElementById("storyScene");
+const storyTitle = document.getElementById("storyTitle");
+const storyText = document.getElementById("storyText");
+
+const openingStory = [
+  {
+    title: "旅程開始",
+    text: "在關都地區的清晨，\n快龍決定踏上屬於自己的冠軍之路。",
+  },
+  {
+    title: "夥伴集結",
+    text: "牠將在旅途中遇見夥伴、組成隊伍，\n一起面對每場關鍵對戰。",
+  },
+  {
+    title: "最終目標",
+    text: "挑戰八大道館、突破四天王，\n最後站上聯盟舞台對決冠軍！",
+  },
+];
+
 let selectedIndex = 0;
+let storyIndex = 0;
+let isStoryPlaying = false;
 
 function hasSaveData() {
   return Boolean(localStorage.getItem(SAVE_KEY));
@@ -39,7 +61,7 @@ function createNewGameData() {
 function startNewGame() {
   const gameData = createNewGameData();
   localStorage.setItem(SAVE_KEY, JSON.stringify(gameData));
-  setStatus("新遊戲已開始！第一站：尼比道館");
+  startOpeningStory();
 }
 
 function loadGame() {
@@ -64,7 +86,52 @@ function activateSelection() {
   loadGame();
 }
 
+function setSceneVisibility(target) {
+  const showMenu = target === "menu";
+  menuScene.classList.toggle("is-hidden", !showMenu);
+  storyScene.classList.toggle("is-hidden", showMenu);
+  storyScene.setAttribute("aria-hidden", String(showMenu));
+}
+
+function renderStoryLine() {
+  const current = openingStory[storyIndex];
+  storyTitle.textContent = current.title;
+  storyText.textContent = current.text;
+}
+
+function startOpeningStory() {
+  isStoryPlaying = true;
+  storyIndex = 0;
+  setSceneVisibility("story");
+  renderStoryLine();
+}
+
+function advanceOpeningStory() {
+  if (!isStoryPlaying) {
+    return;
+  }
+
+  storyIndex += 1;
+  if (storyIndex >= openingStory.length) {
+    isStoryPlaying = false;
+    setSceneVisibility("menu");
+    setStatus("旅程開始！目標：八道館 → 四天王 → 冠軍");
+    renderMenuSelection();
+    return;
+  }
+
+  renderStoryLine();
+}
+
 document.addEventListener("keydown", (event) => {
+  if (isStoryPlaying) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      advanceOpeningStory();
+    }
+    return;
+  }
+
   if (event.key === "ArrowDown") {
     event.preventDefault();
     selectedIndex = (selectedIndex + 1) % menuItems.length;
@@ -93,8 +160,13 @@ menuItems.forEach((button, index) => {
   });
 });
 
+storyScene.addEventListener("click", () => {
+  advanceOpeningStory();
+});
+
 if (!hasSaveData()) {
   setStatus("↑↓ 選擇　Enter 確認");
 }
 
+setSceneVisibility("menu");
 renderMenuSelection();

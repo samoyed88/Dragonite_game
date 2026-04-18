@@ -40,6 +40,18 @@ body {
   image-rendering: pixelated;
 }
 
+.scene {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.scene.is-hidden {
+  display: none;
+}
+
 .title {
   margin: 0 0 14px;
   font-size: clamp(1rem, 2.6vw, 1.3rem);
@@ -85,6 +97,31 @@ nav {
   margin-top: auto;
   font-size: 0.58rem;
   line-height: 1.8;
+  color: var(--gb-mid-dark);
+}
+
+.story-tag {
+  margin: 0 0 18px;
+  font-size: 0.58rem;
+  color: var(--gb-mid-dark);
+}
+
+.story-title {
+  margin: 0 0 20px;
+  font-size: clamp(0.8rem, 2.2vw, 1rem);
+  line-height: 1.8;
+}
+
+.story-text {
+  margin: 0;
+  font-size: clamp(0.64rem, 1.8vw, 0.78rem);
+  line-height: 2;
+  white-space: pre-line;
+}
+
+.story-hint {
+  margin-top: auto;
+  font-size: 0.54rem;
   color: var(--gb-mid-dark);
 }
 

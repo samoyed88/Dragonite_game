@@ -15,21 +15,35 @@
   <body>
     <main class="console">
       <section class="screen" aria-label="遊戲主選單">
-        <h1 class="title">快龍的道館挑戰</h1>
-        <p class="subtitle">DRAGONITE QUEST</p>
+        <section id="menuScene" class="scene" aria-label="主選單場景">
+          <h1 class="title">快龍的道館挑戰</h1>
+          <p class="subtitle">DRAGONITE QUEST</p>
 
-        <nav aria-label="主選單選項">
-          <button class="menu-item is-selected" data-action="new" type="button">
-            開始新遊戲
-          </button>
-          <button class="menu-item" data-action="load" type="button">
-            讀取進度
-          </button>
-        </nav>
+          <nav aria-label="主選單選項">
+            <button class="menu-item is-selected" data-action="new" type="button">
+              開始新遊戲
+            </button>
+            <button class="menu-item" data-action="load" type="button">
+              讀取進度
+            </button>
+          </nav>
 
-        <p id="statusText" class="status" role="status" aria-live="polite">
-          ↑↓ 選擇　Enter 確認
-        </p>
+          <p id="statusText" class="status" role="status" aria-live="polite">
+            ↑↓ 選擇　Enter 確認
+          </p>
+        </section>
+
+        <section
+          id="storyScene"
+          class="scene is-hidden"
+          aria-label="劇情開場"
+          aria-hidden="true"
+        >
+          <p class="story-tag">劇情開場</p>
+          <h2 id="storyTitle" class="story-title"></h2>
+          <p id="storyText" class="story-text"></p>
+          <p class="story-hint">Enter / Space：下一句</p>
+        </section>
       </section>
     </main>
 
