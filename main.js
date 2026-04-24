@@ -38,20 +38,30 @@ const openingStory = [
 ];
 
 const roads = [
-  { x: 160, y: 930, w: 920, h: 62 },
-  { x: 1040, y: 760, w: 64, h: 240 },
-  { x: 680, y: 540, w: 820, h: 58 },
-  { x: 1460, y: 360, w: 60, h: 260 },
-  { x: 1220, y: 300, w: 640, h: 56 },
-  { x: 360, y: 1120, w: 1380, h: 56 },
+  // 1號道路：真新鎮 → 常青市（水平）
+  { x: 220, y: 925, w: 800, h: 56 },
+  // 2號道路：常青市 → 尼比市方向（垂直北上）
+  { x: 955, y: 495, w: 56, h: 486 },
+  // 3號道路：尼比市 → 華藍市（水平東西向）
+  { x: 720, y: 495, w: 780, h: 56 },
+  // 4號道路：華藍市 → 道館區（垂直北上）
+  { x: 1435, y: 275, w: 56, h: 276 },
+  // 5號道路：尼比道館 ↔ 華藍道館（水平）
+  { x: 1260, y: 275, w: 490, h: 56 },
+  // 6號道路：常青市 → 南方（垂直南下）
+  { x: 955, y: 925, w: 56, h: 240 },
+  // 7號道路：南方 → 金黃市（水平東向）
+  { x: 955, y: 1110, w: 625, h: 56 },
+  // 8號道路：尼比市西側岔路（可往西探索）
+  { x: 440, y: 495, w: 336, h: 56 },
+  // 9號道路：真新鎮南方小路
+  { x: 220, y: 925, w: 56, h: 200 },
 ];
 
 const blockedZones = [
   { x: 0, y: 0, w: 360, h: 420 },
-  { x: 1760, y: 0, w: 440, h: 380 },
   { x: 1820, y: 1020, w: 380, h: 380 },
-  { x: 0, y: 1140, w: 320, h: 260 },
-  { x: 880, y: 640, w: 240, h: 120 },
+  { x: 0, y: 1200, w: 180, h: 200 },
 ];
 
 const landmarks = [
@@ -71,6 +81,41 @@ const encounterPoolByTerrain = {
   gym: ["onix", "raichu", "kadabra", "machoke", "electabuzz", "hitmonlee"],
 };
 
+const wildPokemonSpawns = [
+  // 1號道路沿途
+  { x: 380, y: 890, terrain: "road" },
+  { x: 560, y: 970, terrain: "wild" },
+  { x: 720, y: 895, terrain: "road" },
+  // 常青市附近
+  { x: 1060, y: 860, terrain: "wild" },
+  { x: 880, y: 1020, terrain: "wild" },
+  // 2號道路（北上）
+  { x: 910, y: 720, terrain: "road" },
+  { x: 1010, y: 610, terrain: "wild" },
+  // 尼比市附近
+  { x: 640, y: 460, terrain: "wild" },
+  { x: 860, y: 570, terrain: "wild" },
+  // 3號道路
+  { x: 1100, y: 460, terrain: "road" },
+  { x: 1250, y: 560, terrain: "wild" },
+  // 華藍市附近
+  { x: 1380, y: 450, terrain: "wild" },
+  { x: 1560, y: 580, terrain: "wild" },
+  // 道館區域
+  { x: 1350, y: 230, terrain: "wild" },
+  { x: 1600, y: 360, terrain: "wild" },
+  // 南方道路往金黃市
+  { x: 1100, y: 1070, terrain: "wild" },
+  { x: 1300, y: 1150, terrain: "road" },
+  { x: 1480, y: 1070, terrain: "wild" },
+  // 西側岔路
+  { x: 500, y: 440, terrain: "wild" },
+  // 真新鎮南方
+  { x: 280, y: 1060, terrain: "wild" },
+];
+
+const INTERACT_RANGE = 90;
+
 const DEFAULT_POSITION = { x: 260, y: 960 };
 const activeKeys = { up: false, down: false, left: false, right: false };
 const pokemonSpriteCache = new Map();
@@ -87,6 +132,8 @@ let lastFrameTime = 0;
 let lastPersistTime = 0;
 let encounterRequestId = 0;
 let lastEncounterKey = "";
+let activeWildPokemon = [];
+let nearbyPokemon = null;
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(value, max));
@@ -391,6 +438,84 @@ function renderEncounterCards(cards, titleText = "附近夥伴候選（PokéAPI�
   });
 }
 
+function populateWildPokemon() {
+  activeWildPokemon = wildPokemonSpawns.map((spawn, index) => {
+    const pool = encounterPoolByTerrain[spawn.terrain] ?? encounterPoolByTerrain.wild;
+    const species = pool[index % pool.length];
+    return { ...spawn, species, element: null, sprite: null };
+  });
+}
+
+function renderWildPokemonOnMap() {
+  const layer = document.getElementById("wildPokemonLayer");
+  layer.innerHTML = "";
+  activeWildPokemon.forEach((pokemon) => {
+    const el = document.createElement("div");
+    el.className = "wild-pokemon";
+    el.style.left = `${pokemon.x}px`;
+    el.style.top = `${pokemon.y}px`;
+    const img = document.createElement("img");
+    img.alt = pokemon.species;
+    img.loading = "lazy";
+    el.appendChild(img);
+    const label = document.createElement("p");
+    label.className = "wild-pokemon-name";
+    label.textContent = pokemon.species;
+    el.appendChild(label);
+    layer.appendChild(el);
+    pokemon.element = el;
+
+    fetchPokemonSprite(pokemon.species)
+      .then((url) => {
+        img.src = url;
+        pokemon.sprite = url;
+      })
+      .catch(() => {
+        el.classList.add("wild-pokemon-missing");
+      });
+  });
+}
+
+function getNearestWildPokemon() {
+  let nearest = null;
+  let minDist = Infinity;
+  for (const pokemon of activeWildPokemon) {
+    const dist = getDistance(playerPosition, pokemon);
+    if (dist < minDist) {
+      minDist = dist;
+      nearest = pokemon;
+    }
+  }
+  return minDist <= INTERACT_RANGE ? nearest : null;
+}
+
+function updateWildPokemonHighlight() {
+  const prev = nearbyPokemon;
+  nearbyPokemon = getNearestWildPokemon();
+
+  if (prev && prev !== nearbyPokemon && prev.element) {
+    prev.element.classList.remove("wild-pokemon-nearby");
+  }
+  if (nearbyPokemon && nearbyPokemon.element) {
+    nearbyPokemon.element.classList.add("wild-pokemon-nearby");
+  }
+
+  const mapHint = document.getElementById("mapHint");
+  if (nearbyPokemon) {
+    mapHint.textContent = `靠近了 ${nearbyPokemon.species}！按 Enter / Space 互動`;
+  } else {
+    mapHint.textContent = "長按 ↑↓←→ 連續移動快龍　Enter / Space 探索";
+  }
+}
+
+function interactWithPokemon(pokemon) {
+  setMapStatus(`你遇到了野生的 ${pokemon.species}！牠看起來很友善。`);
+  renderEncounterCards(
+    [{ name: pokemon.species, sprite: pokemon.sprite }],
+    `野生 ${pokemon.species} 出現！`,
+  );
+}
+
 async function fetchPokemonSprite(name) {
   if (pokemonSpriteCache.has(name)) {
     return pokemonSpriteCache.get(name);
@@ -519,6 +644,7 @@ function gameLoop(timestamp) {
     updateMapHud();
     setMapStatus(buildLocationMessage(playerPosition));
     updateEncounterPanel();
+    updateWildPokemonHighlight();
 
     if (timestamp - lastPersistTime > 900) {
       persistWorldState();
@@ -572,10 +698,13 @@ function renderStoryLine() {
 function enterMapScene(initialMessage) {
   isStoryPlaying = false;
   setSceneVisibility("map");
+  populateWildPokemon();
+  renderWildPokemonOnMap();
   renderPlayerAndCamera();
   updateMapHud();
   setMapStatus(initialMessage ?? buildLocationMessage(playerPosition));
   updateEncounterPanel();
+  updateWildPokemonHighlight();
 }
 
 function startNewGame() {
@@ -630,6 +759,10 @@ function advanceOpeningStory() {
 }
 
 function inspectCurrentPosition() {
+  if (nearbyPokemon) {
+    interactWithPokemon(nearbyPokemon);
+    return;
+  }
   updateMapHud();
   setMapStatus(buildLocationMessage(playerPosition));
   updateEncounterPanel();

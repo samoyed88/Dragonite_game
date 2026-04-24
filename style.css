@@ -174,9 +174,67 @@ nav {
 }
 
 .roads-layer,
-.landmarks-layer {
+.landmarks-layer,
+.wild-pokemon-layer {
   position: absolute;
   inset: 0;
+}
+
+.wild-pokemon-layer {
+  z-index: 10;
+}
+
+.wild-pokemon {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  width: 48px;
+  transition: transform 0.2s;
+  cursor: default;
+}
+
+.wild-pokemon img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.3));
+}
+
+.wild-pokemon-name {
+  margin: 1px 0 0;
+  font-size: 0.35rem;
+  line-height: 1.2;
+  color: var(--gb-dark);
+  text-transform: capitalize;
+  white-space: nowrap;
+  background: rgba(214, 226, 117, 0.85);
+  border: 1px solid var(--gb-dark);
+  padding: 0 3px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.wild-pokemon-nearby {
+  transform: translate(-50%, -50%) scale(1.25);
+  z-index: 15;
+}
+
+.wild-pokemon-nearby .wild-pokemon-name {
+  opacity: 1;
+}
+
+.wild-pokemon-nearby img {
+  animation: pokemon-bounce 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes pokemon-bounce {
+  from { transform: translateY(0); }
+  to { transform: translateY(-6px); }
+}
+
+.wild-pokemon-missing {
+  opacity: 0.4;
 }
 
 .road-segment {
