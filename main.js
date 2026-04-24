@@ -546,51 +546,23 @@ async function loadDragoniteSprite() {
   }
 }
 
-function getEncounterSpecies(point) {
-  const terrainType = getTerrainType(point);
-  const pool = encounterPoolByTerrain[terrainType] ?? encounterPoolByTerrain.wild;
-  const seedA = Math.floor(point.x / 90);
-  const seedB = Math.floor(point.y / 90);
-  const picked = [];
-  for (let i = 0; i < 3; i += 1) {
-    const index = (seedA * 11 + seedB * 7 + i * 3) % pool.length;
-    const candidate = pool[index];
-    if (!picked.includes(candidate)) {
-      picked.push(candidate);
-    }
-  }
-  return picked;
-}
+const ENCOUNTER_PANEL_RANGE = 300;
 
-async function updateEncounterPanel() {
-  const terrainType = getTerrainType(playerPosition);
-  const zoneKey = `${terrainType}-${Math.floor(playerPosition.x / 180)}-${Math.floor(
-    playerPosition.y / 180,
-  )}`;
-  if (zoneKey === lastEncounterKey) {
+function updateEncounterPanel() {
+  const nearby = activeWildPokemon
+    .map((pokemon) => ({ pokemon, dist: getDistance(playerPosition, pokemon) }))
+    .filter((entry) => entry.dist <= ENCOUNTER_PANEL_RANGE)
+    .sort((a, b) => a.dist - b.dist)
+    .slice(0, 3)
+    .map((entry) => entry.pokemon);
+
+  const cards = nearby.map((p) => ({ name: p.species, sprite: p.sprite }));
+
+  if (cards.length === 0) {
+    renderEncounterCards([], "附近沒有發現寶可夢");
     return;
   }
-  lastEncounterKey = zoneKey;
-
-  const species = getEncounterSpecies(playerPosition);
-  const requestId = ++encounterRequestId;
-  renderEncounterCards(species.map((name) => ({ name, sprite: null })), "正在連線 PokéAPI...");
-
-  const results = await Promise.allSettled(species.map((name) => fetchPokemonSprite(name)));
-  if (requestId !== encounterRequestId) {
-    return;
-  }
-
-  const cards = results.map((result, index) => {
-    return {
-      name: species[index],
-      sprite: result.status === "fulfilled" ? result.value : null,
-    };
-  });
-  const loadedCount = cards.filter((card) => Boolean(card.sprite)).length;
-  const titleText =
-    loadedCount === cards.length ? "附近夥伴候選（PokéAPI）" : "PokéAPI 部分失敗，已顯示可用資料";
-  renderEncounterCards(cards, titleText);
+  renderEncounterCards(cards, `附近夥伴（${cards.length} 隻）`);
 }
 
 function updateExplorationState() {
