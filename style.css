@@ -359,6 +359,123 @@ nav {
   text-transform: capitalize;
 }
 
+/* ── Encounter Scene (Safari-style) ── */
+
+.enc-view {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  border: 3px solid var(--gb-dark);
+  background: linear-gradient(180deg, #c5db55 0%, #a8bf18 100%);
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.enc-sprite {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.35));
+  flex-shrink: 0;
+}
+
+.enc-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.enc-pokemon-name {
+  margin: 0;
+  font-size: clamp(0.7rem, 2vw, 0.85rem);
+  text-transform: capitalize;
+  line-height: 1.6;
+}
+
+.enc-rarity {
+  margin: 4px 0 8px;
+  font-size: 0.5rem;
+  color: var(--gb-mid-dark);
+}
+
+.enc-friend-bar {
+  width: 100%;
+  height: 10px;
+  border: 2px solid var(--gb-dark);
+  background: #7a9a08;
+}
+
+.enc-friend-fill {
+  height: 100%;
+  width: 0%;
+  background: #f4f6bc;
+  transition: width 0.35s ease;
+}
+
+.enc-friend-label {
+  margin: 3px 0 0;
+  font-size: 0.4rem;
+  color: var(--gb-mid-dark);
+}
+
+.enc-msg {
+  margin: 0 0 10px;
+  font-size: clamp(0.6rem, 1.7vw, 0.72rem);
+  line-height: 2;
+  min-height: 3.2em;
+  white-space: pre-line;
+}
+
+.enc-actions {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.enc-btn {
+  appearance: none;
+  border: 3px solid var(--gb-dark);
+  background: #a8bf18;
+  color: var(--gb-dark);
+  font-family: inherit;
+  font-size: clamp(0.6rem, 1.8vw, 0.75rem);
+  padding: 10px 6px;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.enc-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.enc-btn.is-selected {
+  background: var(--gb-dark);
+  color: var(--gb-light);
+}
+
+.enc-btn:focus-visible {
+  outline: 3px dashed var(--gb-dark);
+  outline-offset: 3px;
+}
+
+.enc-btn-key {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+  text-align: center;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+  font-size: 0.55rem;
+  flex-shrink: 0;
+}
+
 @media (max-width: 480px) {
   .console {
     padding: 16px;

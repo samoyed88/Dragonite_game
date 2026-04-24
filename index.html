@@ -73,6 +73,42 @@
           </section>
           <p id="mapStatus" class="status">你站在真新鎮，旅程正式開始！</p>
         </section>
+
+        <section
+          id="encounterScene"
+          class="scene is-hidden"
+          aria-label="寶可夢相遇"
+          aria-hidden="true"
+        >
+          <p class="story-tag" id="encounterTag">野生寶可夢出現！</p>
+          <div class="enc-view">
+            <img id="encSprite" class="enc-sprite" alt="" />
+            <div class="enc-info">
+              <p id="encName" class="enc-pokemon-name"></p>
+              <p id="encRarity" class="enc-rarity"></p>
+              <div class="enc-friend-bar">
+                <div id="encFriendFill" class="enc-friend-fill"></div>
+              </div>
+              <p class="enc-friend-label">友好度</p>
+            </div>
+          </div>
+          <p id="encMsg" class="enc-msg"></p>
+          <nav class="enc-actions" aria-label="行動選項">
+            <button class="enc-btn" data-enc="friend" type="button">
+              <span class="enc-btn-key">1</span> 交朋友
+            </button>
+            <button class="enc-btn" data-enc="snack" type="button">
+              <span class="enc-btn-key">2</span> 給零食
+            </button>
+            <button class="enc-btn" data-enc="observe" type="button">
+              <span class="enc-btn-key">3</span> 觀察
+            </button>
+            <button class="enc-btn" data-enc="run" type="button">
+              <span class="enc-btn-key">4</span> 離開
+            </button>
+          </nav>
+          <p id="encPartyCount" class="status"></p>
+        </section>
       </section>
     </main>
 

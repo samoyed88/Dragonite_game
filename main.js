@@ -21,6 +21,15 @@ const locationTitle = document.getElementById("locationTitle");
 const locationMeta = document.getElementById("locationMeta");
 const encounterList = document.getElementById("encounterList");
 const encounterTitle = document.querySelector(".encounter-title");
+const encounterScene = document.getElementById("encounterScene");
+const encSprite = document.getElementById("encSprite");
+const encName = document.getElementById("encName");
+const encRarity = document.getElementById("encRarity");
+const encMsg = document.getElementById("encMsg");
+const encFriendFill = document.getElementById("encFriendFill");
+const encPartyCount = document.getElementById("encPartyCount");
+const encTag = document.getElementById("encounterTag");
+const encButtons = Array.from(document.querySelectorAll(".enc-btn"));
 
 const openingStory = [
   {
@@ -114,6 +123,20 @@ const wildPokemonSpawns = [
   { x: 280, y: 1060, terrain: "wild" },
 ];
 
+const pokemonRarity = {
+  pidgey: "common", rattata: "common", oddish: "common", bellsprout: "common",
+  spearow: "common", sandshrew: "common", paras: "common",
+  "nidoran-m": "uncommon", "nidoran-f": "uncommon", meowth: "uncommon",
+  growlithe: "uncommon", ponyta: "uncommon", psyduck: "uncommon",
+  machop: "uncommon", jigglypuff: "uncommon",
+  pikachu: "rare", eevee: "rare", abra: "rare",
+  onix: "rare", raichu: "rare", kadabra: "rare",
+  machoke: "rare", electabuzz: "rare", hitmonlee: "rare",
+};
+const rarityBaseRate = { common: 55, uncommon: 35, rare: 15 };
+const rarityFleeRate = { common: 10, uncommon: 18, rare: 30 };
+const rarityLabels = { common: "常見", uncommon: "少見", rare: "稀有" };
+
 const INTERACT_RANGE = 90;
 
 const DEFAULT_POSITION = { x: 260, y: 960 };
@@ -134,6 +157,8 @@ let encounterRequestId = 0;
 let lastEncounterKey = "";
 let activeWildPokemon = [];
 let nearbyPokemon = null;
+let encounterState = null;
+let encActionIndex = 0;
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(value, max));
@@ -185,6 +210,7 @@ function createNewGameData() {
       eliteFourDefeated: false,
       championDefeated: false,
     },
+    party: [],
     world: {
       position: { ...DEFAULT_POSITION },
       storyPlayed: false,
@@ -308,9 +334,10 @@ function updateMapHud() {
   const nearestTown = getNearestLandmark(playerPosition, "town");
   const nearestGym = getNearestLandmark(playerPosition, "gym");
   locationTitle.textContent = getLocationName(playerPosition);
+  const partySize = getParty().length;
   locationMeta.textContent = `座標 (${Math.round(playerPosition.x)}, ${Math.round(
     playerPosition.y,
-  )})・${terrainLabel(terrainType)}・已探索 ${discoveredZones.size} 區`;
+  )})・${terrainLabel(terrainType)}・夥伴 ${partySize} 隻・已探索 ${discoveredZones.size} 區`;
 
   if (nearestTown && nearestGym) {
     setMapStatus(
@@ -508,12 +535,159 @@ function updateWildPokemonHighlight() {
   }
 }
 
+function getParty() {
+  const data = readGameData();
+  return data?.party ?? [];
+}
+
+function addToParty(species, sprite) {
+  const data = readGameData();
+  if (!data) return;
+  if (!Array.isArray(data.party)) data.party = [];
+  data.party.push({ species, sprite, befriendedAt: new Date().toISOString() });
+  saveGameData(data);
+}
+
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function startEncounter(pokemon) {
+  const rarity = pokemonRarity[pokemon.species] ?? "common";
+  encounterState = {
+    pokemon,
+    rarity,
+    friendliness: 0,
+    fleeModifier: 0,
+    turns: 0,
+    maxTurns: 10,
+    ended: false,
+  };
+  encActionIndex = 0;
+
+  encSprite.src = pokemon.sprite ?? "";
+  encName.textContent = pokemon.species;
+  encRarity.textContent = `稀有度：${rarityLabels[rarity]}　基礎友好率 ${rarityBaseRate[rarity]}%`;
+  encFriendFill.style.width = "0%";
+  encMsg.textContent = `野生的 ${pokemon.species} 出現了！\n牠用好奇的眼神看著你。`;
+  encPartyCount.textContent = `目前夥伴：${getParty().length} 隻`;
+  encTag.textContent = "野生寶可夢出現！";
+  setEncButtons(true);
+  renderEncActionSelection();
+  setSceneVisibility("encounter");
+}
+
+function setEncButtons(enabled) {
+  encButtons.forEach((btn) => { btn.disabled = !enabled; });
+}
+
+function renderEncActionSelection() {
+  encButtons.forEach((btn, i) => {
+    btn.classList.toggle("is-selected", i === encActionIndex);
+    if (i === encActionIndex) btn.focus();
+  });
+}
+
+function endEncounter(message) {
+  encounterState.ended = true;
+  encMsg.textContent = message;
+  setEncButtons(false);
+  encTag.textContent = "結束";
+  setTimeout(() => {
+    returnToMapFromEncounter();
+  }, 1800);
+}
+
+function returnToMapFromEncounter() {
+  encounterState = null;
+  setSceneVisibility("map");
+  updateEncounterPanel();
+  updateWildPokemonHighlight();
+}
+
+function updateFriendBar() {
+  const pct = Math.min(encounterState.friendliness, 100);
+  encFriendFill.style.width = `${pct}%`;
+}
+
+function checkFlee() {
+  const { rarity, fleeModifier } = encounterState;
+  const fleeChance = Math.max(0, rarityFleeRate[rarity] + fleeModifier);
+  const roll = randomInt(1, 100);
+  return roll <= fleeChance;
+}
+
+function performEncounterAction(action) {
+  if (!encounterState || encounterState.ended) return;
+
+  const state = encounterState;
+  const name = state.pokemon.species;
+  state.turns += 1;
+
+  if (action === "run") {
+    endEncounter(`你向 ${name} 揮揮手，轉身離開了。`);
+    return;
+  }
+
+  if (action === "friend") {
+    const baseRate = rarityBaseRate[state.rarity];
+    const bonus = Math.floor(state.friendliness * 1.5);
+    const successRate = Math.min(baseRate + bonus, 95);
+    const roll = randomInt(1, 100);
+
+    if (roll <= successRate) {
+      // befriend success
+      addToParty(name, state.pokemon.sprite);
+      encPartyCount.textContent = `目前夥伴：${getParty().length} 隻`;
+
+      // remove from map
+      const idx = activeWildPokemon.indexOf(state.pokemon);
+      if (idx !== -1) {
+        state.pokemon.element?.remove();
+        activeWildPokemon.splice(idx, 1);
+      }
+      nearbyPokemon = null;
+
+      endEncounter(`${name} 成為了你的夥伴！\n牠開心地跳了起來！`);
+      return;
+    }
+
+    encMsg.textContent = `${name} 似乎還沒準備好…\n（成功率 ${successRate}%，骰到 ${roll}）`;
+  }
+
+  if (action === "snack") {
+    const gain = randomInt(15, 25);
+    state.friendliness = Math.min(state.friendliness + gain, 100);
+    state.fleeModifier -= 8;
+    updateFriendBar();
+    encMsg.textContent = `你給了 ${name} 一些零食！\n牠開心地吃了起來。友好度 +${gain}`;
+  }
+
+  if (action === "observe") {
+    const gain = randomInt(5, 12);
+    state.friendliness = Math.min(state.friendliness + gain, 100);
+    updateFriendBar();
+    encMsg.textContent = `你靜靜觀察 ${name}…\n牠似乎放鬆了一些。友好度 +${gain}`;
+  }
+
+  // check flee after action
+  if (checkFlee()) {
+    endEncounter(`${name} 突然跑掉了！\n下次再試試吧。`);
+    return;
+  }
+
+  // check max turns
+  if (state.turns >= state.maxTurns) {
+    endEncounter(`時間太久了，${name} 漸漸走遠了…`);
+    return;
+  }
+
+  encRarity.textContent =
+    `稀有度：${rarityLabels[state.rarity]}　回合 ${state.turns}/${state.maxTurns}`;
+}
+
 function interactWithPokemon(pokemon) {
-  setMapStatus(`你遇到了野生的 ${pokemon.species}！牠看起來很友善。`);
-  renderEncounterCards(
-    [{ name: pokemon.species, sprite: pokemon.sprite }],
-    `野生 ${pokemon.species} 出現！`,
-  );
+  startEncounter(pokemon);
 }
 
 async function fetchPokemonSprite(name) {
@@ -646,12 +820,15 @@ function setSceneVisibility(target) {
   const showMenu = target === "menu";
   const showStory = target === "story";
   const showMap = target === "map";
+  const showEncounter = target === "encounter";
 
   menuScene.classList.toggle("is-hidden", !showMenu);
   storyScene.classList.toggle("is-hidden", !showStory);
   mapScene.classList.toggle("is-hidden", !showMap);
+  encounterScene.classList.toggle("is-hidden", !showEncounter);
   storyScene.setAttribute("aria-hidden", String(!showStory));
   mapScene.setAttribute("aria-hidden", String(!showMap));
+  encounterScene.setAttribute("aria-hidden", String(!showEncounter));
   currentScene = target;
 
   if (showMap) {
@@ -761,6 +938,34 @@ document.addEventListener("keydown", (event) => {
     return;
   }
 
+  if (currentScene === "encounter") {
+    event.preventDefault();
+    if (!encounterState || encounterState.ended) return;
+
+    if (event.key === "1" || event.key === "2" || event.key === "3" || event.key === "4") {
+      const actions = ["friend", "snack", "observe", "run"];
+      encActionIndex = Number(event.key) - 1;
+      renderEncActionSelection();
+      performEncounterAction(actions[encActionIndex]);
+      return;
+    }
+    if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+      encActionIndex = (encActionIndex - 1 + encButtons.length) % encButtons.length;
+      renderEncActionSelection();
+      return;
+    }
+    if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+      encActionIndex = (encActionIndex + 1) % encButtons.length;
+      renderEncActionSelection();
+      return;
+    }
+    if (event.key === "Enter" || event.key === " ") {
+      const action = encButtons[encActionIndex].dataset.enc;
+      performEncounterAction(action);
+    }
+    return;
+  }
+
   if (currentScene === "map") {
     if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) {
       event.preventDefault();
@@ -818,6 +1023,15 @@ storyScene.addEventListener("click", () => {
 
 mapScene.addEventListener("click", () => {
   inspectCurrentPosition();
+});
+
+encButtons.forEach((btn, index) => {
+  btn.addEventListener("click", () => {
+    if (!encounterState || encounterState.ended) return;
+    encActionIndex = index;
+    renderEncActionSelection();
+    performEncounterAction(btn.dataset.enc);
+  });
 });
 
 buildWorldObjects();
