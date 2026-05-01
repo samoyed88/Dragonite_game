@@ -449,6 +449,84 @@ nav {
   gap: 6px;
 }
 
+.gym-btn {
+  appearance: none;
+  border: 3px solid var(--gb-dark);
+  background: #a8bf18;
+  color: var(--gb-dark);
+  font-family: inherit;
+  font-size: clamp(0.6rem, 1.8vw, 0.75rem);
+  padding: 10px 6px;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gym-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.gym-btn.is-selected {
+  background: var(--gb-dark);
+  color: var(--gb-light);
+}
+
+.gym-btn:focus-visible {
+  outline: 3px dashed var(--gb-dark);
+  outline-offset: 3px;
+}
+
+.gym-battle-box {
+  width: 100%;
+  border: 3px solid var(--gb-dark);
+  background: linear-gradient(180deg, #c5db55 0%, #a8bf18 100%);
+  padding: 10px;
+  margin-bottom: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.gym-side {
+  border: 2px solid var(--gb-dark);
+  background: #d6e275;
+  padding: 8px;
+}
+
+.gym-label {
+  margin: 0;
+  font-size: 0.6rem;
+  line-height: 1.5;
+}
+
+.gym-meta {
+  margin: 4px 0 6px;
+  font-size: 0.5rem;
+  color: var(--gb-mid-dark);
+}
+
+.gym-bar {
+  width: 100%;
+  height: 10px;
+  border: 2px solid var(--gb-dark);
+  background: #7a9a08;
+}
+
+.gym-bar-fill {
+  height: 100%;
+  width: 100%;
+  background: #f4f6bc;
+  transition: width 0.25s ease;
+}
+
+.gym-hp-text {
+  margin: 4px 0 0;
+  font-size: 0.45rem;
+  color: var(--gb-mid-dark);
+}
+
 .enc-btn:disabled {
   opacity: 0.4;
   cursor: default;

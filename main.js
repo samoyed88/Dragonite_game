@@ -22,6 +22,7 @@ const locationMeta = document.getElementById("locationMeta");
 const encounterList = document.getElementById("encounterList");
 const encounterTitle = document.querySelector(".encounter-title");
 const encounterScene = document.getElementById("encounterScene");
+const gymScene = document.getElementById("gymScene");
 const encSprite = document.getElementById("encSprite");
 const encName = document.getElementById("encName");
 const encRarity = document.getElementById("encRarity");
@@ -30,6 +31,18 @@ const encFriendFill = document.getElementById("encFriendFill");
 const encPartyCount = document.getElementById("encPartyCount");
 const encTag = document.getElementById("encounterTag");
 const encButtons = Array.from(document.querySelectorAll(".enc-btn"));
+const gymTag = document.getElementById("gymTag");
+const gymTitle = document.getElementById("gymTitle");
+const gymDragoniteMeta = document.getElementById("gymDragoniteMeta");
+const gymDragoniteHpFill = document.getElementById("gymDragoniteHpFill");
+const gymDragoniteHpText = document.getElementById("gymDragoniteHpText");
+const gymEnemyName = document.getElementById("gymEnemyName");
+const gymEnemyMeta = document.getElementById("gymEnemyMeta");
+const gymEnemyHpFill = document.getElementById("gymEnemyHpFill");
+const gymEnemyHpText = document.getElementById("gymEnemyHpText");
+const gymMsg = document.getElementById("gymMsg");
+const gymStatus = document.getElementById("gymStatus");
+const gymButtons = Array.from(document.querySelectorAll(".gym-btn"));
 
 const openingStory = [
   {
@@ -138,6 +151,37 @@ const rarityFleeRate = { common: 10, uncommon: 18, rare: 30 };
 const rarityLabels = { common: "常見", uncommon: "少見", rare: "稀有" };
 
 const INTERACT_RANGE = 90;
+const DRAGONITE_MAX_LEVEL = 100;
+const DRAGONITE_INITIAL_LEVEL = 10;
+const DRAGONITE_BASE_STATS = { hp: 68, attack: 22, defense: 16 };
+
+const gymConfigs = {
+  "pewter-gym": {
+    leader: "小剛",
+    type: "rock",
+    typeLabel: "岩石",
+    badgeName: "灰色徽章",
+    recommendedLevel: 12,
+    badgeRewardExp: 120,
+    team: [
+      { species: "geodude", level: 12 },
+      { species: "onix", level: 14 },
+    ],
+  },
+  "cerulean-gym": {
+    leader: "小霞",
+    type: "water",
+    typeLabel: "水",
+    badgeName: "藍色徽章",
+    recommendedLevel: 20,
+    requiredBadges: 1,
+    badgeRewardExp: 180,
+    team: [
+      { species: "staryu", level: 18 },
+      { species: "starmie", level: 21 },
+    ],
+  },
+};
 
 const DEFAULT_POSITION = { x: 260, y: 960 };
 const activeKeys = { up: false, down: false, left: false, right: false };
@@ -159,6 +203,8 @@ let activeWildPokemon = [];
 let nearbyPokemon = null;
 let encounterState = null;
 let encActionIndex = 0;
+let gymBattleState = null;
+let gymActionIndex = 0;
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(value, max));
@@ -199,14 +245,132 @@ function renderMenuSelection() {
   });
 }
 
+function calculateDragoniteStats(level) {
+  return {
+    maxHp: DRAGONITE_BASE_STATS.hp + (level - 1) * 6,
+    attack: DRAGONITE_BASE_STATS.attack + (level - 1) * 2,
+    defense: DRAGONITE_BASE_STATS.defense + (level - 1),
+  };
+}
+
+function expToNextLevel(level) {
+  return 45 + Math.round(level * 16);
+}
+
+function ensureDragoniteState(gameData) {
+  if (!gameData.player) {
+    gameData.player = {};
+  }
+  if (!gameData.progress) {
+    gameData.progress = {};
+  }
+  if (!gameData.progress.gymWins) {
+    gameData.progress.gymWins = {};
+  }
+
+  const dragonite = gameData.player.dragonite ?? {};
+  const level = clamp(
+    Number.isFinite(dragonite.level) ? Math.floor(dragonite.level) : DRAGONITE_INITIAL_LEVEL,
+    1,
+    DRAGONITE_MAX_LEVEL,
+  );
+  const stats = calculateDragoniteStats(level);
+  const currentHp = clamp(
+    Number.isFinite(dragonite.currentHp) ? Math.floor(dragonite.currentHp) : stats.maxHp,
+    0,
+    stats.maxHp,
+  );
+  const exp = Math.max(0, Number.isFinite(dragonite.exp) ? Math.floor(dragonite.exp) : 0);
+
+  gameData.player.dragonite = {
+    level,
+    exp,
+    maxHp: stats.maxHp,
+    currentHp,
+    attack: stats.attack,
+    defense: stats.defense,
+  };
+
+  return gameData.player.dragonite;
+}
+
+function gainDragoniteExp(amount) {
+  const data = readGameData();
+  if (!data) {
+    return "";
+  }
+
+  const dragonite = ensureDragoniteState(data);
+  let gain = Math.max(0, Math.floor(amount));
+  if (!gain) {
+    return "";
+  }
+
+  let leveled = 0;
+  while (gain > 0 && dragonite.level < DRAGONITE_MAX_LEVEL) {
+    const needed = expToNextLevel(dragonite.level) - dragonite.exp;
+    const consume = Math.min(needed, gain);
+    dragonite.exp += consume;
+    gain -= consume;
+
+    if (dragonite.exp >= expToNextLevel(dragonite.level)) {
+      dragonite.level += 1;
+      dragonite.exp = 0;
+      const nextStats = calculateDragoniteStats(dragonite.level);
+      dragonite.maxHp = nextStats.maxHp;
+      dragonite.attack = nextStats.attack;
+      dragonite.defense = nextStats.defense;
+      dragonite.currentHp = dragonite.maxHp;
+      leveled += 1;
+    }
+  }
+
+  if (dragonite.level >= DRAGONITE_MAX_LEVEL) {
+    dragonite.exp = 0;
+  }
+
+  saveGameData(data);
+
+  if (leveled > 0) {
+    return `\n快龍升級了！目前 Lv.${dragonite.level}`;
+  }
+  return `\n快龍獲得經驗，Lv.${dragonite.level}（${dragonite.exp}/${expToNextLevel(dragonite.level)}）`;
+}
+
+function getDragoniteSnapshot() {
+  const data = readGameData();
+  if (!data) {
+    return null;
+  }
+  const dragonite = ensureDragoniteState(data);
+  return {
+    level: dragonite.level,
+    exp: dragonite.exp,
+    maxHp: dragonite.maxHp,
+    currentHp: dragonite.currentHp,
+    attack: dragonite.attack,
+    defense: dragonite.defense,
+  };
+}
+
 function createNewGameData() {
+  const dragoniteStats = calculateDragoniteStats(DRAGONITE_INITIAL_LEVEL);
   return {
     player: {
       name: "快龍訓練家",
       partner: "dragonite",
+      dragonite: {
+        level: DRAGONITE_INITIAL_LEVEL,
+        exp: 0,
+        maxHp: dragoniteStats.maxHp,
+        currentHp: dragoniteStats.maxHp,
+        attack: dragoniteStats.attack,
+        defense: dragoniteStats.defense,
+      },
     },
     progress: {
       badges: 0,
+      gymWins: {},
       eliteFourDefeated: false,
       championDefeated: false,
     },
@@ -333,11 +497,15 @@ function updateMapHud() {
   const terrainType = getTerrainType(playerPosition);
   const nearestTown = getNearestLandmark(playerPosition, "town");
   const nearestGym = getNearestLandmark(playerPosition, "gym");
+  const dragonite = getDragoniteSnapshot();
   locationTitle.textContent = getLocationName(playerPosition);
   const partySize = getParty().length;
+  const levelText = dragonite
+    ? `Lv.${dragonite.level} HP ${dragonite.currentHp}/${dragonite.maxHp}`
+    : "Lv.--";
   locationMeta.textContent = `座標 (${Math.round(playerPosition.x)}, ${Math.round(
     playerPosition.y,
-  )})・${terrainLabel(terrainType)}・夥伴 ${partySize} 隻・已探索 ${discoveredZones.size} 區`;
+  )})・${terrainLabel(terrainType)}・${levelText}・夥伴 ${partySize} 隻・已探索 ${discoveredZones.size} 區`;
 
   if (nearestTown && nearestGym) {
     setMapStatus(
@@ -543,6 +711,7 @@ function getParty() {
 function addToParty(species, sprite) {
   const data = readGameData();
   if (!data) return;
+  ensureDragoniteState(data);
   if (!Array.isArray(data.party)) data.party = [];
   data.party.push({ species, sprite, befriendedAt: new Date().toISOString() });
   saveGameData(data);
@@ -639,6 +808,8 @@ function performEncounterAction(action) {
       // befriend success
       addToParty(name, state.pokemon.sprite);
       encPartyCount.textContent = `目前夥伴：${getParty().length} 隻`;
+      const rarityExp = { common: 18, uncommon: 28, rare: 42 };
+      const expMessage = gainDragoniteExp(rarityExp[state.rarity] ?? 18);
 
       // remove from map
       const idx = activeWildPokemon.indexOf(state.pokemon);
@@ -648,7 +819,7 @@ function performEncounterAction(action) {
       }
       nearbyPokemon = null;
 
-      endEncounter(`${name} 成為了你的夥伴！\n牠開心地跳了起來！`);
+      endEncounter(`${name} 成為了你的夥伴！\n牠開心地跳了起來！${expMessage}`);
       return;
     }
 
@@ -688,6 +859,241 @@ function performEncounterAction(action) {
 
 function interactWithPokemon(pokemon) {
   startEncounter(pokemon);
+}
+
+function setGymButtons(enabled) {
+  gymButtons.forEach((btn) => { btn.disabled = !enabled; });
+}
+
+function renderGymActionSelection() {
+  gymButtons.forEach((btn, index) => {
+    btn.classList.toggle("is-selected", index === gymActionIndex);
+    if (index === gymActionIndex) {
+      btn.focus();
+    }
+  });
+}
+
+function getMoveMultiplier(moveType, targetType) {
+  if (moveType === "electric" && targetType === "water") return 1.8;
+  if (moveType === "electric" && targetType === "rock") return 0.7;
+  if (moveType === "dragon" && targetType === "rock") return 0.9;
+  return 1;
+}
+
+function createGymEnemy(pokemon, gymType) {
+  const level = pokemon.level;
+  return {
+    species: pokemon.species,
+    level,
+    type: gymType,
+    maxHp: 34 + level * 4,
+    hp: 34 + level * 4,
+    attack: 10 + level * 2,
+    defense: 8 + level,
+  };
+}
+
+function updateGymHud() {
+  if (!gymBattleState) {
+    return;
+  }
+  const { dragonite, enemy } = gymBattleState;
+  gymDragoniteMeta.textContent = `Lv.${dragonite.level}`;
+  gymDragoniteHpFill.style.width = `${(dragonite.hp / dragonite.maxHp) * 100}%`;
+  gymDragoniteHpText.textContent = `HP ${Math.max(0, Math.round(dragonite.hp))} / ${dragonite.maxHp}`;
+
+  gymEnemyName.textContent = enemy.species;
+  gymEnemyMeta.textContent = `${gymBattleState.gym.typeLabel}系・Lv.${enemy.level}`;
+  gymEnemyHpFill.style.width = `${(enemy.hp / enemy.maxHp) * 100}%`;
+  gymEnemyHpText.textContent = `HP ${Math.max(0, Math.round(enemy.hp))} / ${enemy.maxHp}`;
+}
+
+function calcBattleDamage(attacker, defender, power, multiplier = 1) {
+  const base = power + attacker.attack * 0.9 - defender.defense * 0.55;
+  return Math.max(6, Math.round((base + randomInt(-3, 5)) * multiplier));
+}
+
+function finishGymBattle(message, mapMessage) {
+  setGymButtons(false);
+  gymMsg.textContent = message;
+  gymTag.textContent = "道館戰結束";
+  gymBattleState = null;
+  setTimeout(() => {
+    setSceneVisibility("map");
+    updateMapHud();
+    setMapStatus(mapMessage);
+    updateEncounterPanel();
+    updateWildPokemonHighlight();
+  }, 1800);
+}
+
+function saveDragoniteAfterGym(currentHp) {
+  const data = readGameData();
+  if (!data) return;
+  const dragonite = ensureDragoniteState(data);
+  dragonite.currentHp = clamp(Math.round(currentHp), 0, dragonite.maxHp);
+  saveGameData(data);
+}
+
+function handleGymVictory() {
+  const data = readGameData();
+  if (!data || !gymBattleState) {
+    return;
+  }
+
+  ensureDragoniteState(data);
+  const gymId = gymBattleState.landmark.id;
+  const gym = gymBattleState.gym;
+  if (!data.progress.gymWins[gymId]) {
+    data.progress.gymWins[gymId] = true;
+    data.progress.badges = Math.min(8, (data.progress.badges ?? 0) + 1);
+  }
+  data.player.dragonite.currentHp = data.player.dragonite.maxHp;
+  saveGameData(data);
+
+  const expMessage = gainDragoniteExp(gym.badgeRewardExp);
+  const badgeCount = readGameData()?.progress?.badges ?? 0;
+  finishGymBattle(
+    `你擊敗了館主 ${gym.leader}！\n獲得 ${gym.badgeName}。${expMessage}`,
+    `獲勝！目前徽章 ${badgeCount} / 8。`,
+  );
+}
+
+function nextGymEnemy() {
+  if (!gymBattleState) return;
+  gymBattleState.enemyIndex += 1;
+  if (gymBattleState.enemyIndex >= gymBattleState.gym.team.length) {
+    handleGymVictory();
+    return;
+  }
+  const nextPokemon = gymBattleState.gym.team[gymBattleState.enemyIndex];
+  gymBattleState.enemy = createGymEnemy(nextPokemon, gymBattleState.gym.type);
+  updateGymHud();
+  gymMsg.textContent = `${gymBattleState.gym.leader} 派出了 ${gymBattleState.enemy.species}！`;
+}
+
+function performGymAction(action) {
+  if (!gymBattleState) return;
+  const { dragonite, enemy, gym } = gymBattleState;
+
+  if (action === "retreat") {
+    saveDragoniteAfterGym(Math.max(1, dragonite.hp));
+    finishGymBattle("你先撤退整備，準備下次再戰。", "你離開了道館，快龍仍可再次挑戰。");
+    return;
+  }
+
+  let message = "";
+
+  if (action === "claw") {
+    const damage = calcBattleDamage(dragonite, enemy, 15, getMoveMultiplier("dragon", enemy.type));
+    enemy.hp = Math.max(0, enemy.hp - damage);
+    message = `快龍使出龍爪，造成 ${damage} 點傷害！`;
+  } else if (action === "thunder") {
+    const hitRoll = randomInt(1, 100);
+    if (hitRoll <= 90) {
+      const damage = calcBattleDamage(dragonite, enemy, 17, getMoveMultiplier("electric", enemy.type));
+      enemy.hp = Math.max(0, enemy.hp - damage);
+      message = `快龍使出雷電拳，造成 ${damage} 點傷害！`;
+    } else {
+      message = "雷電拳落空了！";
+    }
+  } else if (action === "heal") {
+    const recover = 18 + Math.round(dragonite.level * 0.8);
+    dragonite.hp = Math.min(dragonite.maxHp, dragonite.hp + recover);
+    message = `快龍穩住節奏，回復 ${recover} HP。`;
+  }
+
+  updateGymHud();
+
+  if (enemy.hp <= 0) {
+    const foeExp = Math.round(enemy.level * 14);
+    const expMessage = gainDragoniteExp(foeExp);
+    const freshDragonite = getDragoniteSnapshot();
+    if (freshDragonite) {
+      gymBattleState.dragonite = {
+        level: freshDragonite.level,
+        maxHp: freshDragonite.maxHp,
+        hp: clamp(Math.round(dragonite.hp), 1, freshDragonite.maxHp),
+        attack: freshDragonite.attack,
+        defense: freshDragonite.defense,
+      };
+      saveDragoniteAfterGym(gymBattleState.dragonite.hp);
+    }
+    gymMsg.textContent = `${message}\n${enemy.species} 倒下了！${expMessage}`;
+    nextGymEnemy();
+    return;
+  }
+
+  const enemyPower = gym.type === "rock" ? 16 : 15;
+  const enemyMultiplier = gym.type === "rock" ? 1.15 : 1;
+  const enemyDamage = calcBattleDamage(enemy, dragonite, enemyPower, enemyMultiplier);
+  dragonite.hp = Math.max(0, dragonite.hp - enemyDamage);
+  updateGymHud();
+  message += `\n${enemy.species} 反擊造成 ${enemyDamage} 點傷害！`;
+
+  if (dragonite.hp <= 0) {
+    saveDragoniteAfterGym(1);
+    finishGymBattle(
+      `${message}\n快龍失去戰鬥能力，這次挑戰失敗了。`,
+      "挑戰失敗，先練等再回來挑戰吧。",
+    );
+    return;
+  }
+
+  saveDragoniteAfterGym(dragonite.hp);
+  gymMsg.textContent = message;
+}
+
+function startGymBattle(landmark) {
+  const gym = gymConfigs[landmark.id];
+  if (!gym) {
+    setMapStatus("這座道館尚未開放挑戰。");
+    return;
+  }
+
+  const data = readGameData();
+  if (!data) {
+    return;
+  }
+  const dragonite = ensureDragoniteState(data);
+  const badges = data.progress?.badges ?? 0;
+  const gymWins = data.progress?.gymWins ?? {};
+
+  if (gymWins[landmark.id]) {
+    setMapStatus(`你已經拿過 ${gym.badgeName}，可以前往下一間道館。`);
+    return;
+  }
+  if (Number.isFinite(gym.requiredBadges) && badges < gym.requiredBadges) {
+    setMapStatus(`需要先拿到 ${gym.requiredBadges} 枚徽章，才能挑戰 ${gym.leader}。`);
+    return;
+  }
+
+  saveGameData(data);
+
+  gymBattleState = {
+    landmark,
+    gym,
+    enemyIndex: 0,
+    dragonite: {
+      level: dragonite.level,
+      maxHp: dragonite.maxHp,
+      hp: Math.max(1, dragonite.currentHp),
+      attack: dragonite.attack,
+      defense: dragonite.defense,
+    },
+    enemy: createGymEnemy(gym.team[0], gym.type),
+  };
+  gymActionIndex = 0;
+
+  gymTag.textContent = `館主：${gym.leader}`;
+  gymTitle.textContent = `${landmark.name}・${gym.typeLabel}系道館`;
+  gymStatus.textContent = `建議等級 Lv.${gym.recommendedLevel} 左右`;
+  gymMsg.textContent = `${gym.leader} 接受挑戰！對手屬性：${gym.typeLabel}系。`;
+  setGymButtons(true);
+  renderGymActionSelection();
+  updateGymHud();
+  setSceneVisibility("gym");
 }
 
 async function fetchPokemonSprite(name) {
@@ -821,14 +1227,17 @@ function setSceneVisibility(target) {
   const showStory = target === "story";
   const showMap = target === "map";
   const showEncounter = target === "encounter";
+  const showGym = target === "gym";
 
   menuScene.classList.toggle("is-hidden", !showMenu);
   storyScene.classList.toggle("is-hidden", !showStory);
   mapScene.classList.toggle("is-hidden", !showMap);
   encounterScene.classList.toggle("is-hidden", !showEncounter);
+  gymScene.classList.toggle("is-hidden", !showGym);
   storyScene.setAttribute("aria-hidden", String(!showStory));
   mapScene.setAttribute("aria-hidden", String(!showMap));
   encounterScene.setAttribute("aria-hidden", String(!showEncounter));
+  gymScene.setAttribute("aria-hidden", String(!showGym));
   currentScene = target;
 
   if (showMap) {
@@ -870,6 +1279,8 @@ function loadGame() {
     return;
   }
 
+  ensureDragoniteState(data);
+  saveGameData(data);
   const badges = data?.progress?.badges ?? 0;
   loadWorldStateFromData(data);
   enterMapScene(`讀取成功！徽章 ${badges} / 8，位於 ${getLocationName(playerPosition)}。`);
@@ -908,6 +1319,11 @@ function advanceOpeningStory() {
 }
 
 function inspectCurrentPosition() {
+  const currentLandmark = getCurrentLandmark(playerPosition);
+  if (currentLandmark?.type === "gym") {
+    startGymBattle(currentLandmark);
+    return;
+  }
   if (nearbyPokemon) {
     interactWithPokemon(nearbyPokemon);
     return;
@@ -962,6 +1378,34 @@ document.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === " ") {
       const action = encButtons[encActionIndex].dataset.enc;
       performEncounterAction(action);
+    }
+    return;
+  }
+
+  if (currentScene === "gym") {
+    event.preventDefault();
+    if (!gymBattleState) return;
+
+    if (event.key === "1" || event.key === "2" || event.key === "3" || event.key === "4") {
+      const actions = ["claw", "thunder", "heal", "retreat"];
+      gymActionIndex = Number(event.key) - 1;
+      renderGymActionSelection();
+      performGymAction(actions[gymActionIndex]);
+      return;
+    }
+    if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+      gymActionIndex = (gymActionIndex - 1 + gymButtons.length) % gymButtons.length;
+      renderGymActionSelection();
+      return;
+    }
+    if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+      gymActionIndex = (gymActionIndex + 1) % gymButtons.length;
+      renderGymActionSelection();
+      return;
+    }
+    if (event.key === "Enter" || event.key === " ") {
+      const action = gymButtons[gymActionIndex].dataset.gym;
+      performGymAction(action);
     }
     return;
   }
@@ -1031,6 +1475,15 @@ encButtons.forEach((btn, index) => {
     encActionIndex = index;
     renderEncActionSelection();
     performEncounterAction(btn.dataset.enc);
+  });
+});
+
+gymButtons.forEach((btn, index) => {
+  btn.addEventListener("click", () => {
+    if (!gymBattleState) return;
+    gymActionIndex = index;
+    renderGymActionSelection();
+    performGymAction(btn.dataset.gym);
   });
 });
 

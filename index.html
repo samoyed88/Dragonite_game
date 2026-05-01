@@ -109,6 +109,50 @@
           </nav>
           <p id="encPartyCount" class="status"></p>
         </section>
+
+        <section
+          id="gymScene"
+          class="scene is-hidden"
+          aria-label="道館對戰"
+          aria-hidden="true"
+        >
+          <p class="story-tag" id="gymTag">道館挑戰</p>
+          <h2 id="gymTitle" class="story-title"></h2>
+          <div class="gym-battle-box">
+            <div class="gym-side">
+              <p class="gym-label">快龍</p>
+              <p id="gymDragoniteMeta" class="gym-meta"></p>
+              <div class="gym-bar">
+                <div id="gymDragoniteHpFill" class="gym-bar-fill"></div>
+              </div>
+              <p id="gymDragoniteHpText" class="gym-hp-text"></p>
+            </div>
+            <div class="gym-side">
+              <p id="gymEnemyName" class="gym-label"></p>
+              <p id="gymEnemyMeta" class="gym-meta"></p>
+              <div class="gym-bar">
+                <div id="gymEnemyHpFill" class="gym-bar-fill"></div>
+              </div>
+              <p id="gymEnemyHpText" class="gym-hp-text"></p>
+            </div>
+          </div>
+          <p id="gymMsg" class="enc-msg"></p>
+          <nav class="enc-actions" aria-label="道館戰指令">
+            <button class="gym-btn" data-gym="claw" type="button">
+              <span class="enc-btn-key">1</span> 龍爪
+            </button>
+            <button class="gym-btn" data-gym="thunder" type="button">
+              <span class="enc-btn-key">2</span> 雷電拳
+            </button>
+            <button class="gym-btn" data-gym="heal" type="button">
+              <span class="enc-btn-key">3</span> 回復
+            </button>
+            <button class="gym-btn" data-gym="retreat" type="button">
+              <span class="enc-btn-key">4</span> 撤退
+            </button>
+          </nav>
+          <p id="gymStatus" class="status"></p>
+        </section>
       </section>
     </main>
 
