@@ -139,6 +139,17 @@ nav {
   margin-bottom: 8px;
 }
 
+.map-hud-floating {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  width: min(68%, 290px);
+  margin-bottom: 0;
+  z-index: 30;
+  pointer-events: none;
+  box-shadow: 2px 2px 0 rgba(15, 56, 15, 0.35);
+}
+
 .map-location-title {
   margin: 0;
   font-size: 0.65rem;
@@ -149,6 +160,7 @@ nav {
   margin: 6px 0 0;
   font-size: 0.5rem;
   color: var(--gb-mid-dark);
+  line-height: 1.5;
 }
 
 .map-viewport {

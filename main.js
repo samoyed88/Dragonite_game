@@ -19,6 +19,8 @@ const playerSprite = document.getElementById("playerSprite");
 const mapStatus = document.getElementById("mapStatus");
 const locationTitle = document.getElementById("locationTitle");
 const locationMeta = document.getElementById("locationMeta");
+const mapDragoniteStatus = document.getElementById("mapDragoniteStatus");
+const mapProgressStatus = document.getElementById("mapProgressStatus");
 const encounterList = document.getElementById("encounterList");
 const encounterTitle = document.querySelector(".encounter-title");
 const encounterScene = document.getElementById("encounterScene");
@@ -91,9 +93,19 @@ const landmarks = [
   { id: "viridian", name: "常青市", type: "town", x: 980, y: 940, radius: 92 },
   { id: "pewter", name: "尼比市", type: "town", x: 760, y: 520, radius: 92 },
   { id: "cerulean", name: "華藍市", type: "town", x: 1460, y: 520, radius: 92 },
+  { id: "vermilion", name: "枯葉市", type: "town", x: 1700, y: 980, radius: 92 },
+  { id: "celadon", name: "玉虹市", type: "town", x: 1260, y: 980, radius: 92 },
+  { id: "fuchsia", name: "淺紅市", type: "town", x: 1650, y: 1260, radius: 92 },
+  { id: "cinnabar", name: "紅蓮鎮", type: "town", x: 720, y: 1260, radius: 92 },
   { id: "saffron", name: "金黃市", type: "town", x: 1540, y: 1130, radius: 92 },
-  { id: "pewter-gym", name: "尼比道館", type: "gym", x: 1290, y: 300, radius: 88 },
-  { id: "cerulean-gym", name: "華藍道館", type: "gym", x: 1710, y: 300, radius: 88 },
+  { id: "pewter-gym", name: "尼比道館", type: "gym", x: 700, y: 430, radius: 86 },
+  { id: "cerulean-gym", name: "華藍道館", type: "gym", x: 1540, y: 430, radius: 86 },
+  { id: "vermilion-gym", name: "枯葉道館", type: "gym", x: 1770, y: 1040, radius: 86 },
+  { id: "celadon-gym", name: "玉虹道館", type: "gym", x: 1180, y: 900, radius: 86 },
+  { id: "fuchsia-gym", name: "淺紅道館", type: "gym", x: 1710, y: 1320, radius: 86 },
+  { id: "saffron-gym", name: "金黃道館", type: "gym", x: 1460, y: 1050, radius: 86 },
+  { id: "cinnabar-gym", name: "紅蓮道館", type: "gym", x: 640, y: 1320, radius: 86 },
+  { id: "viridian-gym", name: "常青道館", type: "gym", x: 900, y: 860, radius: 86 },
 ];
 
 const encounterPoolByTerrain = {
@@ -162,7 +174,10 @@ const gymConfigs = {
     typeLabel: "岩石",
     badgeName: "灰色徽章",
     recommendedLevel: 12,
+    requiredBadges: 0,
     badgeRewardExp: 120,
+    enemyPower: 16,
+    enemyMultiplier: 1.1,
     team: [
       { species: "geodude", level: 12 },
       { species: "onix", level: 14 },
@@ -176,9 +191,109 @@ const gymConfigs = {
     recommendedLevel: 20,
     requiredBadges: 1,
     badgeRewardExp: 180,
+    enemyPower: 16,
+    enemyMultiplier: 1.08,
     team: [
       { species: "staryu", level: 18 },
       { species: "starmie", level: 21 },
+    ],
+  },
+  "vermilion-gym": {
+    leader: "馬志士",
+    type: "electric",
+    typeLabel: "電",
+    badgeName: "橘色徽章",
+    recommendedLevel: 24,
+    requiredBadges: 2,
+    badgeRewardExp: 230,
+    enemyPower: 17,
+    enemyMultiplier: 1.1,
+    team: [
+      { species: "voltorb", level: 23 },
+      { species: "pikachu", level: 24 },
+      { species: "raichu", level: 26 },
+    ],
+  },
+  "celadon-gym": {
+    leader: "莉佳",
+    type: "grass",
+    typeLabel: "草",
+    badgeName: "彩虹徽章",
+    recommendedLevel: 30,
+    requiredBadges: 3,
+    badgeRewardExp: 300,
+    enemyPower: 18,
+    enemyMultiplier: 1.12,
+    team: [
+      { species: "tangela", level: 28 },
+      { species: "victreebel", level: 29 },
+      { species: "vileplume", level: 31 },
+    ],
+  },
+  "fuchsia-gym": {
+    leader: "阿桔",
+    type: "poison",
+    typeLabel: "毒",
+    badgeName: "粉紅徽章",
+    recommendedLevel: 37,
+    requiredBadges: 4,
+    badgeRewardExp: 390,
+    enemyPower: 19,
+    enemyMultiplier: 1.13,
+    team: [
+      { species: "koffing", level: 37 },
+      { species: "muk", level: 39 },
+      { species: "weezing", level: 40 },
+    ],
+  },
+  "saffron-gym": {
+    leader: "娜姿",
+    type: "psychic",
+    typeLabel: "超能力",
+    badgeName: "金黃徽章",
+    recommendedLevel: 43,
+    requiredBadges: 5,
+    badgeRewardExp: 470,
+    enemyPower: 20,
+    enemyMultiplier: 1.14,
+    team: [
+      { species: "kadabra", level: 41 },
+      { species: "mr-mime", level: 42 },
+      { species: "alakazam", level: 44 },
+    ],
+  },
+  "cinnabar-gym": {
+    leader: "夏伯",
+    type: "fire",
+    typeLabel: "火",
+    badgeName: "深紅徽章",
+    recommendedLevel: 47,
+    requiredBadges: 6,
+    badgeRewardExp: 560,
+    enemyPower: 21,
+    enemyMultiplier: 1.15,
+    team: [
+      { species: "growlithe", level: 45 },
+      { species: "ponyta", level: 45 },
+      { species: "rapidash", level: 47 },
+      { species: "arcanine", level: 48 },
+    ],
+  },
+  "viridian-gym": {
+    leader: "坂木",
+    type: "ground",
+    typeLabel: "地面",
+    badgeName: "綠色徽章",
+    recommendedLevel: 50,
+    requiredBadges: 7,
+    badgeRewardExp: 650,
+    enemyPower: 22,
+    enemyMultiplier: 1.18,
+    team: [
+      { species: "dugtrio", level: 49 },
+      { species: "nidoking", level: 50 },
+      { species: "nidoqueen", level: 50 },
+      { species: "rhydon", level: 52 },
     ],
   },
 };
@@ -498,14 +613,17 @@ function updateMapHud() {
   const nearestTown = getNearestLandmark(playerPosition, "town");
   const nearestGym = getNearestLandmark(playerPosition, "gym");
   const dragonite = getDragoniteSnapshot();
+  const badges = readGameData()?.progress?.badges ?? 0;
   locationTitle.textContent = getLocationName(playerPosition);
   const partySize = getParty().length;
-  const levelText = dragonite
-    ? `Lv.${dragonite.level} HP ${dragonite.currentHp}/${dragonite.maxHp}`
-    : "Lv.--";
-  locationMeta.textContent = `座標 (${Math.round(playerPosition.x)}, ${Math.round(
-    playerPosition.y,
-  )})・${terrainLabel(terrainType)}・${levelText}・夥伴 ${partySize} 隻・已探索 ${discoveredZones.size} 區`;
+  locationMeta.textContent = `座標 (${Math.round(playerPosition.x)}, ${Math.round(playerPosition.y)})・${terrainLabel(terrainType)}`;
+  if (dragonite) {
+    mapDragoniteStatus.textContent =
+      `快龍 Lv.${dragonite.level}・HP ${dragonite.currentHp}/${dragonite.maxHp}・EXP ${dragonite.exp}/${expToNextLevel(dragonite.level)}`;
+  } else {
+    mapDragoniteStatus.textContent = "快龍 Lv.--・HP --/--";
+  }
+  mapProgressStatus.textContent = `徽章 ${badges}/8・夥伴 ${partySize} 隻・已探索 ${discoveredZones.size} 區`;
 
   if (nearestTown && nearestGym) {
     setMapStatus(
@@ -876,7 +994,14 @@ function renderGymActionSelection() {
 
 function getMoveMultiplier(moveType, targetType) {
   if (moveType === "electric" && targetType === "water") return 1.8;
+  if (moveType === "electric" && targetType === "ground") return 0.25;
+  if (moveType === "electric" && targetType === "grass") return 0.7;
+  if (moveType === "electric" && targetType === "electric") return 0.7;
   if (moveType === "electric" && targetType === "rock") return 0.7;
+  if (moveType === "dragon" && targetType === "fire") return 1.1;
+  if (moveType === "dragon" && targetType === "water") return 1.1;
+  if (moveType === "dragon" && targetType === "grass") return 1.1;
+  if (moveType === "dragon" && targetType === "electric") return 1.1;
   if (moveType === "dragon" && targetType === "rock") return 0.9;
   return 1;
 }
@@ -1025,8 +1150,8 @@ function performGymAction(action) {
     return;
   }
 
-  const enemyPower = gym.type === "rock" ? 16 : 15;
-  const enemyMultiplier = gym.type === "rock" ? 1.15 : 1;
+  const enemyPower = gym.enemyPower ?? 15;
+  const enemyMultiplier = gym.enemyMultiplier ?? 1;
   const enemyDamage = calcBattleDamage(enemy, dragonite, enemyPower, enemyMultiplier);
   dragonite.hp = Math.max(0, dragonite.hp - enemyDamage);
   updateGymHud();
