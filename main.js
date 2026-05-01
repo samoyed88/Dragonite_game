@@ -1106,6 +1106,7 @@ function finishGymBattle(message, mapMessage) {
   setGymButtons(false);
   gymMsg.textContent = message;
   gymTag.textContent = "道館戰結束";
+  restoreAllBattleStatus();
   gymBattleState = null;
   setTimeout(() => {
     setSceneVisibility("map");
@@ -1162,6 +1163,18 @@ function persistGymPlayerTeam(playerTeam) {
   saveGameData(data);
 }
 
+function restoreAllBattleStatus() {
+  const data = readGameData();
+  if (!data) return;
+  const dragonite = ensureDragoniteState(data);
+  ensurePartyState(data);
+  dragonite.currentHp = dragonite.maxHp;
+  data.party.forEach((member) => {
+    member.currentHp = member.maxHp;
+  });
+  saveGameData(data);
+}
+
 function handleGymVictory() {
   const data = readGameData();
   if (!data || !gymBattleState) {
@@ -1176,10 +1189,6 @@ function handleGymVictory() {
     data.progress.badges = Math.min(8, (data.progress.badges ?? 0) + 1);
   }
   ensurePartyState(data);
-  data.player.dragonite.currentHp = data.player.dragonite.maxHp;
-  data.party.forEach((member) => {
-    member.currentHp = member.maxHp;
-  });
   saveGameData(data);
 
   const expMessage = gainDragoniteExp(gym.badgeRewardExp);
