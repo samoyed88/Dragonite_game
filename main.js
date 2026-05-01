@@ -35,6 +35,7 @@ const encTag = document.getElementById("encounterTag");
 const encButtons = Array.from(document.querySelectorAll(".enc-btn"));
 const gymTag = document.getElementById("gymTag");
 const gymTitle = document.getElementById("gymTitle");
+const gymAllyName = document.getElementById("gymAllyName");
 const gymDragoniteMeta = document.getElementById("gymDragoniteMeta");
 const gymDragoniteHpFill = document.getElementById("gymDragoniteHpFill");
 const gymDragoniteHpText = document.getElementById("gymDragoniteHpText");
@@ -368,6 +369,52 @@ function calculateDragoniteStats(level) {
   };
 }
 
+function speciesSeed(species) {
+  return Array.from(species).reduce((sum, char) => sum + char.charCodeAt(0), 0);
+}
+
+function calculatePartnerStats(species, level) {
+  const seed = speciesSeed(species);
+  return {
+    maxHp: 40 + level * 4 + (seed % 8),
+    attack: 12 + Math.round(level * 1.6) + (seed % 5),
+    defense: 10 + Math.round(level * 1.2) + (seed % 4),
+  };
+}
+
+function normalizePartyMember(member, fallbackLevel) {
+  const level = clamp(
+    Number.isFinite(member?.level) ? Math.floor(member.level) : fallbackLevel,
+    5,
+    DRAGONITE_MAX_LEVEL,
+  );
+  const stats = calculatePartnerStats(member.species, level);
+  const currentHp = clamp(
+    Number.isFinite(member?.currentHp) ? Math.floor(member.currentHp) : stats.maxHp,
+    0,
+    stats.maxHp,
+  );
+  return {
+    ...member,
+    level,
+    exp: Math.max(0, Number.isFinite(member?.exp) ? Math.floor(member.exp) : 0),
+    maxHp: stats.maxHp,
+    currentHp,
+    attack: stats.attack,
+    defense: stats.defense,
+  };
+}
+
+function ensurePartyState(gameData) {
+  if (!Array.isArray(gameData.party)) {
+    gameData.party = [];
+    return;
+  }
+  const dragoniteLevel = gameData?.player?.dragonite?.level ?? DRAGONITE_INITIAL_LEVEL;
+  const fallbackLevel = Math.max(6, dragoniteLevel - 2);
+  gameData.party = gameData.party.map((member) => normalizePartyMember(member, fallbackLevel));
+}
+
 function expToNextLevel(level) {
   return 45 + Math.round(level * 16);
 }
@@ -405,6 +452,7 @@ function ensureDragoniteState(gameData) {
     attack: stats.attack,
     defense: stats.defense,
   };
+  ensurePartyState(gameData);
 
   return gameData.player.dragonite;
 }
@@ -829,9 +877,21 @@ function getParty() {
 function addToParty(species, sprite) {
   const data = readGameData();
   if (!data) return;
-  ensureDragoniteState(data);
+  const dragonite = ensureDragoniteState(data);
   if (!Array.isArray(data.party)) data.party = [];
-  data.party.push({ species, sprite, befriendedAt: new Date().toISOString() });
+  const partnerLevel = Math.max(6, dragonite.level - 2);
+  const partnerStats = calculatePartnerStats(species, partnerLevel);
+  data.party.push({
+    species,
+    sprite,
+    befriendedAt: new Date().toISOString(),
+    level: partnerLevel,
+    exp: 0,
+    maxHp: partnerStats.maxHp,
+    currentHp: partnerStats.maxHp,
+    attack: partnerStats.attack,
+    defense: partnerStats.defense,
+  });
   saveGameData(data);
 }
 
@@ -1023,10 +1083,13 @@ function updateGymHud() {
   if (!gymBattleState) {
     return;
   }
-  const { dragonite, enemy } = gymBattleState;
-  gymDragoniteMeta.textContent = `Lv.${dragonite.level}`;
-  gymDragoniteHpFill.style.width = `${(dragonite.hp / dragonite.maxHp) * 100}%`;
-  gymDragoniteHpText.textContent = `HP ${Math.max(0, Math.round(dragonite.hp))} / ${dragonite.maxHp}`;
+  const { enemy } = gymBattleState;
+  const activeAlly = gymBattleState.playerTeam[gymBattleState.activeAllyIndex];
+  const aliveCount = gymBattleState.playerTeam.filter((ally) => ally.hp > 0).length;
+  gymAllyName.textContent = activeAlly.displayName;
+  gymDragoniteMeta.textContent = `Lv.${activeAlly.level}・存活 ${aliveCount}/${gymBattleState.playerTeam.length}`;
+  gymDragoniteHpFill.style.width = `${(activeAlly.hp / activeAlly.maxHp) * 100}%`;
+  gymDragoniteHpText.textContent = `HP ${Math.max(0, Math.round(activeAlly.hp))} / ${activeAlly.maxHp}`;
 
   gymEnemyName.textContent = enemy.species;
   gymEnemyMeta.textContent = `${gymBattleState.gym.typeLabel}系・Lv.${enemy.level}`;
@@ -1053,11 +1116,49 @@ function finishGymBattle(message, mapMessage) {
   }, 1800);
 }
 
-function saveDragoniteAfterGym(currentHp) {
+function buildGymPlayerTeam(data) {
+  const dragonite = ensureDragoniteState(data);
+  ensurePartyState(data);
+  const dragoniteMember = {
+    slotType: "dragonite",
+    displayName: "快龍",
+    level: dragonite.level,
+    maxHp: dragonite.maxHp,
+    hp: Math.max(1, dragonite.currentHp),
+    attack: dragonite.attack,
+    defense: dragonite.defense,
+  };
+  const partners = data.party.map((member, index) => ({
+    slotType: "party",
+    partyIndex: index,
+    displayName: `${member.species}`,
+    level: member.level,
+    maxHp: member.maxHp,
+    hp: Math.max(0, member.currentHp),
+    attack: member.attack,
+    defense: member.defense,
+  }));
+  const roster = [dragoniteMember, ...partners];
+  if (!roster.some((ally) => ally.hp > 0)) {
+    roster.forEach((ally) => { ally.hp = ally.maxHp; });
+  }
+  return roster;
+}
+
+function persistGymPlayerTeam(playerTeam) {
   const data = readGameData();
   if (!data) return;
   const dragonite = ensureDragoniteState(data);
-  dragonite.currentHp = clamp(Math.round(currentHp), 0, dragonite.maxHp);
+  ensurePartyState(data);
+  playerTeam.forEach((ally) => {
+    if (ally.slotType === "dragonite") {
+      dragonite.currentHp = clamp(Math.round(ally.hp), 0, dragonite.maxHp);
+      return;
+    }
+    const member = data.party[ally.partyIndex];
+    if (!member) return;
+    member.currentHp = clamp(Math.round(ally.hp), 0, member.maxHp);
+  });
   saveGameData(data);
 }
 
@@ -1074,7 +1175,11 @@ function handleGymVictory() {
     data.progress.gymWins[gymId] = true;
     data.progress.badges = Math.min(8, (data.progress.badges ?? 0) + 1);
   }
+  ensurePartyState(data);
   data.player.dragonite.currentHp = data.player.dragonite.maxHp;
+  data.party.forEach((member) => {
+    member.currentHp = member.maxHp;
+  });
   saveGameData(data);
 
   const expMessage = gainDragoniteExp(gym.badgeRewardExp);
@@ -1100,10 +1205,21 @@ function nextGymEnemy() {
 
 function performGymAction(action) {
   if (!gymBattleState) return;
-  const { dragonite, enemy, gym } = gymBattleState;
+  const { enemy, gym } = gymBattleState;
+  const ally = gymBattleState.playerTeam[gymBattleState.activeAllyIndex];
+
+  function findNextAliveAllyIndex() {
+    for (let step = 1; step <= gymBattleState.playerTeam.length; step += 1) {
+      const nextIndex = (gymBattleState.activeAllyIndex + step) % gymBattleState.playerTeam.length;
+      if (gymBattleState.playerTeam[nextIndex].hp > 0) {
+        return nextIndex;
+      }
+    }
+    return -1;
+  }
 
   if (action === "retreat") {
-    saveDragoniteAfterGym(Math.max(1, dragonite.hp));
+    persistGymPlayerTeam(gymBattleState.playerTeam);
     finishGymBattle("你先撤退整備，準備下次再戰。", "你離開了道館，快龍仍可再次挑戰。");
     return;
   }
@@ -1111,22 +1227,30 @@ function performGymAction(action) {
   let message = "";
 
   if (action === "claw") {
-    const damage = calcBattleDamage(dragonite, enemy, 15, getMoveMultiplier("dragon", enemy.type));
+    const damage = calcBattleDamage(ally, enemy, 15, getMoveMultiplier("dragon", enemy.type));
     enemy.hp = Math.max(0, enemy.hp - damage);
-    message = `快龍使出龍爪，造成 ${damage} 點傷害！`;
+    message = `${ally.displayName} 使出龍爪，造成 ${damage} 點傷害！`;
   } else if (action === "thunder") {
     const hitRoll = randomInt(1, 100);
     if (hitRoll <= 90) {
-      const damage = calcBattleDamage(dragonite, enemy, 17, getMoveMultiplier("electric", enemy.type));
+      const damage = calcBattleDamage(ally, enemy, 17, getMoveMultiplier("electric", enemy.type));
       enemy.hp = Math.max(0, enemy.hp - damage);
-      message = `快龍使出雷電拳，造成 ${damage} 點傷害！`;
+      message = `${ally.displayName} 使出雷電拳，造成 ${damage} 點傷害！`;
     } else {
       message = "雷電拳落空了！";
     }
   } else if (action === "heal") {
-    const recover = 18 + Math.round(dragonite.level * 0.8);
-    dragonite.hp = Math.min(dragonite.maxHp, dragonite.hp + recover);
-    message = `快龍穩住節奏，回復 ${recover} HP。`;
+    const recover = 18 + Math.round(ally.level * 0.8);
+    ally.hp = Math.min(ally.maxHp, ally.hp + recover);
+    message = `${ally.displayName} 穩住節奏，回復 ${recover} HP。`;
+  } else if (action === "switch") {
+    const nextAllyIndex = findNextAliveAllyIndex();
+    if (nextAllyIndex === -1 || nextAllyIndex === gymBattleState.activeAllyIndex) {
+      gymMsg.textContent = "沒有可替換的夥伴了。";
+      return;
+    }
+    gymBattleState.activeAllyIndex = nextAllyIndex;
+    message = `你換上了 ${gymBattleState.playerTeam[nextAllyIndex].displayName}！`;
   }
 
   updateGymHud();
@@ -1136,37 +1260,45 @@ function performGymAction(action) {
     const expMessage = gainDragoniteExp(foeExp);
     const freshDragonite = getDragoniteSnapshot();
     if (freshDragonite) {
-      gymBattleState.dragonite = {
-        level: freshDragonite.level,
-        maxHp: freshDragonite.maxHp,
-        hp: clamp(Math.round(dragonite.hp), 1, freshDragonite.maxHp),
-        attack: freshDragonite.attack,
-        defense: freshDragonite.defense,
-      };
-      saveDragoniteAfterGym(gymBattleState.dragonite.hp);
+      const dragoniteAlly = gymBattleState.playerTeam.find((member) => member.slotType === "dragonite");
+      if (dragoniteAlly) {
+        const existingHp = Math.max(1, Math.round(dragoniteAlly.hp));
+        dragoniteAlly.level = freshDragonite.level;
+        dragoniteAlly.maxHp = freshDragonite.maxHp;
+        dragoniteAlly.hp = clamp(existingHp, 1, freshDragonite.maxHp);
+        dragoniteAlly.attack = freshDragonite.attack;
+        dragoniteAlly.defense = freshDragonite.defense;
+      }
     }
+    persistGymPlayerTeam(gymBattleState.playerTeam);
     gymMsg.textContent = `${message}\n${enemy.species} 倒下了！${expMessage}`;
     nextGymEnemy();
     return;
   }
 
+  const currentAlly = gymBattleState.playerTeam[gymBattleState.activeAllyIndex];
   const enemyPower = gym.enemyPower ?? 15;
   const enemyMultiplier = gym.enemyMultiplier ?? 1;
-  const enemyDamage = calcBattleDamage(enemy, dragonite, enemyPower, enemyMultiplier);
-  dragonite.hp = Math.max(0, dragonite.hp - enemyDamage);
+  const enemyDamage = calcBattleDamage(enemy, currentAlly, enemyPower, enemyMultiplier);
+  currentAlly.hp = Math.max(0, currentAlly.hp - enemyDamage);
   updateGymHud();
   message += `\n${enemy.species} 反擊造成 ${enemyDamage} 點傷害！`;
 
-  if (dragonite.hp <= 0) {
-    saveDragoniteAfterGym(1);
-    finishGymBattle(
-      `${message}\n快龍失去戰鬥能力，這次挑戰失敗了。`,
-      "挑戰失敗，先練等再回來挑戰吧。",
-    );
-    return;
+  if (currentAlly.hp <= 0) {
+    const nextAllyIndex = findNextAliveAllyIndex();
+    if (nextAllyIndex === -1 || gymBattleState.playerTeam[nextAllyIndex].hp <= 0) {
+      persistGymPlayerTeam(gymBattleState.playerTeam);
+      finishGymBattle(
+        `${message}\n你的夥伴全數失去戰鬥能力，這次挑戰失敗了。`,
+        "挑戰失敗，先練等再回來挑戰吧。",
+      );
+      return;
+    }
+    gymBattleState.activeAllyIndex = nextAllyIndex;
+    message += `\n${currentAlly.displayName} 倒下了，你換上 ${gymBattleState.playerTeam[nextAllyIndex].displayName}！`;
   }
 
-  saveDragoniteAfterGym(dragonite.hp);
+  persistGymPlayerTeam(gymBattleState.playerTeam);
   gymMsg.textContent = message;
 }
 
@@ -1181,7 +1313,7 @@ function startGymBattle(landmark) {
   if (!data) {
     return;
   }
-  const dragonite = ensureDragoniteState(data);
+  ensureDragoniteState(data);
   const badges = data.progress?.badges ?? 0;
   const gymWins = data.progress?.gymWins ?? {};
 
@@ -1194,26 +1326,25 @@ function startGymBattle(landmark) {
     return;
   }
 
+  ensurePartyState(data);
   saveGameData(data);
+
+  const playerTeam = buildGymPlayerTeam(data);
+  const firstAliveIndex = playerTeam.findIndex((allyEntry) => allyEntry.hp > 0);
 
   gymBattleState = {
     landmark,
     gym,
     enemyIndex: 0,
-    dragonite: {
-      level: dragonite.level,
-      maxHp: dragonite.maxHp,
-      hp: Math.max(1, dragonite.currentHp),
-      attack: dragonite.attack,
-      defense: dragonite.defense,
-    },
+    playerTeam,
+    activeAllyIndex: firstAliveIndex === -1 ? 0 : firstAliveIndex,
     enemy: createGymEnemy(gym.team[0], gym.type),
   };
   gymActionIndex = 0;
 
   gymTag.textContent = `館主：${gym.leader}`;
   gymTitle.textContent = `${landmark.name}・${gym.typeLabel}系道館`;
-  gymStatus.textContent = `建議等級 Lv.${gym.recommendedLevel} 左右`;
+  gymStatus.textContent = `建議等級 Lv.${gym.recommendedLevel} 左右・可用夥伴 ${playerTeam.length} 隻`;
   gymMsg.textContent = `${gym.leader} 接受挑戰！對手屬性：${gym.typeLabel}系。`;
   setGymButtons(true);
   renderGymActionSelection();
@@ -1511,8 +1642,8 @@ document.addEventListener("keydown", (event) => {
     event.preventDefault();
     if (!gymBattleState) return;
 
-    if (event.key === "1" || event.key === "2" || event.key === "3" || event.key === "4") {
-      const actions = ["claw", "thunder", "heal", "retreat"];
+    if (event.key === "1" || event.key === "2" || event.key === "3" || event.key === "4" || event.key === "5") {
+      const actions = ["claw", "thunder", "heal", "retreat", "switch"];
       gymActionIndex = Number(event.key) - 1;
       renderGymActionSelection();
       performGymAction(actions[gymActionIndex]);
