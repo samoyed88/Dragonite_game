@@ -82,10 +82,12 @@ const roads = [
   { x: 440, y: 495, w: 336, h: 56 },
   // 9號道路：真新鎮南方小路
   { x: 220, y: 925, w: 56, h: 200 },
+  // 10號道路：往石英高原（從尼比市西側岔路北上）
+  { x: 440, y: 280, w: 56, h: 270 },
 ];
 
 const blockedZones = [
-  { x: 0, y: 0, w: 360, h: 420 },
+  { x: 0, y: 0, w: 380, h: 260 },
   { x: 1820, y: 1020, w: 380, h: 380 },
   { x: 0, y: 1200, w: 180, h: 200 },
 ];
@@ -108,6 +110,7 @@ const landmarks = [
   { id: "saffron-gym", name: "金黃道館", type: "gym", x: 1460, y: 1050, radius: 86 },
   { id: "cinnabar-gym", name: "紅蓮道館", type: "gym", x: 640, y: 1320, radius: 86 },
   { id: "viridian-gym", name: "常青道館", type: "gym", x: 900, y: 860, radius: 86 },
+  { id: "indigo-plateau", name: "石英高原", type: "elite-four", x: 460, y: 300, radius: 100 },
 ];
 
 const encounterPoolByTerrain = {
@@ -298,6 +301,253 @@ const gymConfigs = {
       { species: "rhydon", level: 52 },
     ],
   },
+};
+
+/* ── 屬性剋制表 ── */
+const typeChart = {
+  normal:   { rock: 0.6, ghost: 0 },
+  fire:     { fire: 0.6, water: 0.6, grass: 1.5, ice: 1.5, rock: 0.6, dragon: 0.6 },
+  water:    { fire: 1.5, water: 0.6, grass: 0.6, ground: 1.5, rock: 1.5, dragon: 0.6 },
+  electric: { water: 1.5, electric: 0.6, grass: 0.6, ground: 0, flying: 1.5, dragon: 0.6 },
+  grass:    { fire: 0.6, water: 1.5, grass: 0.6, poison: 0.6, ground: 1.5, flying: 0.6, rock: 1.5, dragon: 0.6 },
+  ice:      { fire: 0.6, water: 0.6, ice: 0.6, grass: 1.5, ground: 1.5, flying: 1.5, dragon: 1.5 },
+  fighting: { normal: 1.5, ice: 1.5, rock: 1.5, poison: 0.6, flying: 0.6, psychic: 0.6, ghost: 0 },
+  poison:   { grass: 1.5, poison: 0.6, ground: 0.6, rock: 0.6, ghost: 0.6 },
+  ground:   { fire: 1.5, electric: 1.5, grass: 0.6, poison: 1.5, rock: 1.5, flying: 0 },
+  flying:   { electric: 0.6, grass: 1.5, fighting: 1.5, rock: 0.6 },
+  psychic:  { fighting: 1.5, poison: 1.5, psychic: 0.6 },
+  rock:     { fire: 1.5, ice: 1.5, fighting: 0.6, ground: 0.6, flying: 1.5 },
+  ghost:    { normal: 0, psychic: 1.5, ghost: 1.5 },
+  dragon:   { dragon: 1.5 },
+};
+
+/* ── 寶可夢屬性對照 ── */
+const pokemonTypes = {
+  dragonite: "dragon",
+  // 遭遇池
+  pidgey: "flying", rattata: "normal", oddish: "grass", bellsprout: "grass",
+  spearow: "flying", sandshrew: "ground", paras: "grass",
+  "nidoran-m": "poison", "nidoran-f": "poison", meowth: "normal",
+  growlithe: "fire", ponyta: "fire", psyduck: "water",
+  machop: "fighting", jigglypuff: "normal",
+  pikachu: "electric", eevee: "normal", abra: "psychic",
+  onix: "rock", raichu: "electric", kadabra: "psychic",
+  machoke: "fighting", electabuzz: "electric", hitmonlee: "fighting",
+  // 道館隊伍
+  geodude: "rock", staryu: "water", starmie: "water",
+  voltorb: "electric", tangela: "grass", victreebel: "grass", vileplume: "grass",
+  koffing: "poison", muk: "poison", weezing: "poison",
+  "mr-mime": "psychic", alakazam: "psychic",
+  rapidash: "fire", arcanine: "fire",
+  dugtrio: "ground", nidoking: "poison", nidoqueen: "poison", rhydon: "rock",
+  // 四天王 + 冠軍
+  dewgong: "ice", cloyster: "ice", lapras: "ice", jynx: "ice",
+  gengar: "ghost", haunter: "ghost", golbat: "poison", arbok: "poison",
+  hitmonchan: "fighting", poliwrath: "fighting", primeape: "fighting",
+  gyarados: "water", aerodactyl: "rock", charizard: "fire",
+  venusaur: "grass", blastoise: "water", pidgeot: "flying", snorlax: "normal",
+  exeggutor: "grass", slowbro: "psychic",
+};
+
+const typeLabels = {
+  normal: "一般", fire: "火", water: "水", electric: "電", grass: "草",
+  ice: "冰", fighting: "格鬥", poison: "毒", ground: "地面", flying: "飛行",
+  psychic: "超能力", rock: "岩石", ghost: "幽靈", dragon: "龍",
+};
+
+/* ── 種族技能表 ── */
+const speciesMoves = {
+  dragonite:  [{ name: "龍爪",   type: "dragon",   power: 15, accuracy: 100 },
+               { name: "雷電拳", type: "electric",  power: 17, accuracy: 90 }],
+  // 遭遇池 — 野外
+  oddish:     [{ name: "吸取",   type: "grass",     power: 11, accuracy: 100 },
+               { name: "毒粉",   type: "poison",    power: 13, accuracy: 90 }],
+  bellsprout: [{ name: "藤鞭",   type: "grass",     power: 12, accuracy: 100 },
+               { name: "溶解液", type: "poison",    power: 13, accuracy: 95 }],
+  pikachu:    [{ name: "電擊",   type: "electric",  power: 12, accuracy: 100 },
+               { name: "電光一閃", type: "normal",  power: 12, accuracy: 100 }],
+  paras:      [{ name: "蘑菇孢子", type: "grass",   power: 11, accuracy: 95 },
+               { name: "劈開",   type: "normal",    power: 13, accuracy: 100 }],
+  "nidoran-m":[{ name: "角撞",   type: "poison",    power: 11, accuracy: 100 },
+               { name: "毒針",   type: "poison",    power: 10, accuracy: 100 }],
+  "nidoran-f":[{ name: "撞擊",   type: "normal",    power: 10, accuracy: 100 },
+               { name: "咬住",   type: "normal",    power: 12, accuracy: 100 }],
+  // 遭遇池 — 道路
+  pidgey:     [{ name: "啄",     type: "flying",    power: 10, accuracy: 100 },
+               { name: "起風",   type: "flying",    power: 12, accuracy: 95 }],
+  rattata:    [{ name: "撞擊",   type: "normal",    power: 10, accuracy: 100 },
+               { name: "必殺門牙", type: "normal",  power: 14, accuracy: 90 }],
+  spearow:    [{ name: "啄",     type: "flying",    power: 10, accuracy: 100 },
+               { name: "憤怒",   type: "normal",    power: 13, accuracy: 100 }],
+  sandshrew:  [{ name: "抓",     type: "normal",    power: 11, accuracy: 100 },
+               { name: "挖洞",   type: "ground",    power: 14, accuracy: 95 }],
+  growlithe:  [{ name: "火花",   type: "fire",      power: 12, accuracy: 100 },
+               { name: "咬住",   type: "normal",    power: 13, accuracy: 100 }],
+  ponyta:     [{ name: "火花",   type: "fire",      power: 12, accuracy: 100 },
+               { name: "踩踏",   type: "normal",    power: 13, accuracy: 100 }],
+  // 遭遇池 — 城鎮
+  eevee:      [{ name: "撞擊",   type: "normal",    power: 11, accuracy: 100 },
+               { name: "電光一閃", type: "normal",  power: 12, accuracy: 100 }],
+  meowth:     [{ name: "抓",     type: "normal",    power: 11, accuracy: 100 },
+               { name: "咬住",   type: "normal",    power: 13, accuracy: 100 }],
+  jigglypuff: [{ name: "拍擊",   type: "normal",    power: 11, accuracy: 100 },
+               { name: "捲曲",   type: "normal",    power: 10, accuracy: 100 }],
+  psyduck:    [{ name: "水槍",   type: "water",     power: 12, accuracy: 100 },
+               { name: "念力",   type: "psychic",   power: 13, accuracy: 95 }],
+  abra:       [{ name: "念力",   type: "psychic",   power: 13, accuracy: 95 },
+               { name: "瞬間移動", type: "psychic", power: 10, accuracy: 100 }],
+  machop:     [{ name: "空手劈", type: "fighting",  power: 13, accuracy: 100 },
+               { name: "踢倒",   type: "fighting",  power: 12, accuracy: 95 }],
+  // 遭遇池 — 道館
+  onix:       [{ name: "岩石投擲", type: "rock",    power: 14, accuracy: 90 },
+               { name: "綁緊",   type: "normal",    power: 11, accuracy: 85 }],
+  raichu:     [{ name: "十萬伏特", type: "electric", power: 16, accuracy: 100 },
+               { name: "電光一閃", type: "normal",  power: 12, accuracy: 100 }],
+  kadabra:    [{ name: "精神強念", type: "psychic",  power: 15, accuracy: 100 },
+               { name: "念力",   type: "psychic",   power: 13, accuracy: 95 }],
+  machoke:    [{ name: "空手劈", type: "fighting",  power: 14, accuracy: 100 },
+               { name: "地獄翻滾", type: "fighting", power: 15, accuracy: 85 }],
+  electabuzz: [{ name: "雷電拳", type: "electric",  power: 15, accuracy: 90 },
+               { name: "電擊",   type: "electric",  power: 12, accuracy: 100 }],
+  hitmonlee:  [{ name: "高踢腿", type: "fighting",  power: 16, accuracy: 90 },
+               { name: "二連踢", type: "fighting",  power: 13, accuracy: 100 }],
+  // 道館隊伍專用
+  geodude:    [{ name: "岩石投擲", type: "rock",    power: 13, accuracy: 90 },
+               { name: "撞擊",   type: "normal",    power: 10, accuracy: 100 }],
+  staryu:     [{ name: "水槍",   type: "water",     power: 12, accuracy: 100 },
+               { name: "高速星星", type: "normal",  power: 13, accuracy: 100 }],
+  starmie:    [{ name: "水砲",   type: "water",     power: 16, accuracy: 95 },
+               { name: "精神強念", type: "psychic",  power: 15, accuracy: 100 }],
+  voltorb:    [{ name: "電擊",   type: "electric",  power: 12, accuracy: 100 },
+               { name: "音爆",   type: "normal",    power: 11, accuracy: 100 }],
+  tangela:    [{ name: "藤鞭",   type: "grass",     power: 13, accuracy: 100 },
+               { name: "綁緊",   type: "grass",     power: 11, accuracy: 85 }],
+  victreebel: [{ name: "飛葉快刀", type: "grass",   power: 15, accuracy: 95 },
+               { name: "溶解液", type: "poison",    power: 13, accuracy: 100 }],
+  vileplume:  [{ name: "花瓣舞", type: "grass",     power: 16, accuracy: 95 },
+               { name: "毒粉",   type: "poison",    power: 13, accuracy: 90 }],
+  koffing:    [{ name: "污泥攻擊", type: "poison",  power: 13, accuracy: 100 },
+               { name: "煙幕",   type: "normal",    power: 10, accuracy: 100 }],
+  muk:        [{ name: "污泥炸彈", type: "poison",  power: 16, accuracy: 95 },
+               { name: "溶解液", type: "poison",    power: 13, accuracy: 100 }],
+  weezing:    [{ name: "污泥炸彈", type: "poison",  power: 16, accuracy: 95 },
+               { name: "自爆",   type: "normal",    power: 20, accuracy: 100 }],
+  "mr-mime":  [{ name: "精神強念", type: "psychic",  power: 15, accuracy: 100 },
+               { name: "屏障",   type: "psychic",   power: 10, accuracy: 100 }],
+  alakazam:   [{ name: "精神強念", type: "psychic",  power: 16, accuracy: 100 },
+               { name: "精神衝擊", type: "psychic", power: 18, accuracy: 90 }],
+  rapidash:   [{ name: "大字爆炎", type: "fire",    power: 16, accuracy: 90 },
+               { name: "踩踏",   type: "normal",    power: 13, accuracy: 100 }],
+  arcanine:   [{ name: "噴射火焰", type: "fire",    power: 17, accuracy: 95 },
+               { name: "極速",   type: "normal",    power: 14, accuracy: 100 }],
+  dugtrio:    [{ name: "地震",   type: "ground",    power: 17, accuracy: 100 },
+               { name: "挖洞",   type: "ground",    power: 14, accuracy: 95 }],
+  nidoking:   [{ name: "地震",   type: "ground",    power: 17, accuracy: 100 },
+               { name: "角撞",   type: "poison",    power: 14, accuracy: 100 }],
+  nidoqueen:  [{ name: "地震",   type: "ground",    power: 17, accuracy: 100 },
+               { name: "毒針",   type: "poison",    power: 13, accuracy: 100 }],
+  rhydon:     [{ name: "地震",   type: "ground",    power: 17, accuracy: 100 },
+               { name: "岩石投擲", type: "rock",    power: 15, accuracy: 90 }],
+  // 四天王隊伍
+  dewgong:    [{ name: "冰凍光線", type: "ice",     power: 16, accuracy: 95 },
+               { name: "水砲",   type: "water",     power: 16, accuracy: 95 }],
+  cloyster:   [{ name: "冰凍光線", type: "ice",     power: 16, accuracy: 95 },
+               { name: "尖刺加農砲", type: "normal", power: 15, accuracy: 100 }],
+  lapras:     [{ name: "暴風雪", type: "ice",       power: 18, accuracy: 85 },
+               { name: "水砲",   type: "water",     power: 16, accuracy: 95 }],
+  jynx:       [{ name: "暴風雪", type: "ice",       power: 18, accuracy: 85 },
+               { name: "精神強念", type: "psychic",  power: 15, accuracy: 100 }],
+  slowbro:    [{ name: "水砲",   type: "water",     power: 16, accuracy: 95 },
+               { name: "精神強念", type: "psychic",  power: 15, accuracy: 100 }],
+  hitmonchan: [{ name: "百萬噸拳擊", type: "fighting", power: 16, accuracy: 90 },
+               { name: "雷電拳", type: "electric",  power: 15, accuracy: 90 }],
+  primeape:   [{ name: "空手劈", type: "fighting",  power: 15, accuracy: 100 },
+               { name: "憤怒",   type: "normal",    power: 14, accuracy: 100 }],
+  poliwrath:  [{ name: "地獄翻滾", type: "fighting", power: 16, accuracy: 85 },
+               { name: "水砲",   type: "water",     power: 16, accuracy: 95 }],
+  gengar:     [{ name: "暗影球", type: "ghost",     power: 17, accuracy: 95 },
+               { name: "催眠術", type: "psychic",   power: 12, accuracy: 85 }],
+  haunter:    [{ name: "暗影球", type: "ghost",     power: 15, accuracy: 95 },
+               { name: "舔",     type: "ghost",     power: 12, accuracy: 100 }],
+  golbat:     [{ name: "咬住",   type: "normal",    power: 13, accuracy: 100 },
+               { name: "吸血",   type: "flying",    power: 14, accuracy: 100 }],
+  arbok:      [{ name: "毒針",   type: "poison",    power: 14, accuracy: 100 },
+               { name: "咬住",   type: "normal",    power: 13, accuracy: 100 }],
+  gyarados:   [{ name: "水砲",   type: "water",     power: 17, accuracy: 95 },
+               { name: "龍之怒", type: "dragon",    power: 15, accuracy: 100 }],
+  aerodactyl: [{ name: "岩崩",   type: "rock",      power: 16, accuracy: 90 },
+               { name: "翼擊",   type: "flying",    power: 15, accuracy: 95 }],
+  // 冠軍隊伍
+  pidgeot:    [{ name: "翼擊",   type: "flying",    power: 15, accuracy: 95 },
+               { name: "電光一閃", type: "normal",  power: 13, accuracy: 100 }],
+  charizard:  [{ name: "噴射火焰", type: "fire",    power: 17, accuracy: 95 },
+               { name: "龍之怒", type: "dragon",    power: 15, accuracy: 100 }],
+  venusaur:   [{ name: "日光束", type: "grass",     power: 18, accuracy: 90 },
+               { name: "污泥炸彈", type: "poison",  power: 16, accuracy: 95 }],
+  blastoise:  [{ name: "水砲",   type: "water",     power: 17, accuracy: 95 },
+               { name: "冰凍光線", type: "ice",     power: 16, accuracy: 95 }],
+  snorlax:    [{ name: "泰山壓頂", type: "normal",  power: 17, accuracy: 100 },
+               { name: "地震",   type: "ground",    power: 17, accuracy: 100 }],
+  exeggutor:  [{ name: "日光束", type: "grass",     power: 18, accuracy: 90 },
+               { name: "精神強念", type: "psychic",  power: 15, accuracy: 100 }],
+};
+
+function getMovesForSpecies(species) {
+  if (speciesMoves[species]) return speciesMoves[species];
+  const type = pokemonTypes[species] ?? "normal";
+  return [
+    { name: "撞擊", type: "normal", power: 12, accuracy: 100 },
+    { name: "屬性攻擊", type, power: 14, accuracy: 95 },
+  ];
+}
+
+/* ── 四天王 + 冠軍設定 ── */
+const eliteFourConfigs = [
+  {
+    member: "科拿", title: "四天王", type: "ice", typeLabel: "冰",
+    recommendedLevel: 54, rewardExp: 700,
+    team: [
+      { species: "dewgong", level: 54 }, { species: "cloyster", level: 53 },
+      { species: "slowbro", level: 54 }, { species: "jynx", level: 56 },
+      { species: "lapras", level: 56 },
+    ],
+  },
+  {
+    member: "希巴", title: "四天王", type: "fighting", typeLabel: "格鬥",
+    recommendedLevel: 56, rewardExp: 750,
+    team: [
+      { species: "onix", level: 53 }, { species: "hitmonchan", level: 55 },
+      { species: "hitmonlee", level: 55 }, { species: "onix", level: 56 },
+      { species: "machoke", level: 58 },
+    ],
+  },
+  {
+    member: "菊子", title: "四天王", type: "ghost", typeLabel: "幽靈",
+    recommendedLevel: 58, rewardExp: 800,
+    team: [
+      { species: "gengar", level: 56 }, { species: "golbat", level: 56 },
+      { species: "haunter", level: 55 }, { species: "arbok", level: 58 },
+      { species: "gengar", level: 60 },
+    ],
+  },
+  {
+    member: "阿渡", title: "四天王", type: "dragon", typeLabel: "龍",
+    recommendedLevel: 60, rewardExp: 900,
+    team: [
+      { species: "gyarados", level: 58 }, { species: "aerodactyl", level: 60 },
+      { species: "dragonite", level: 62 },
+    ],
+  },
+];
+
+const championConfig = {
+  member: "小智", title: "冠軍", type: "mixed", typeLabel: "混合",
+  recommendedLevel: 63, rewardExp: 1200,
+  team: [
+    { species: "pidgeot", level: 61 }, { species: "alakazam", level: 61 },
+    { species: "rhydon", level: 61 }, { species: "arcanine", level: 63 },
+    { species: "exeggutor", level: 63 }, { species: "blastoise", level: 65 },
+  ],
 };
 
 const DEFAULT_POSITION = { x: 260, y: 960 };
@@ -604,7 +854,7 @@ function isOnRoad(point) {
 
 function getTerrainType(point) {
   const currentLandmark = getCurrentLandmark(point);
-  if (currentLandmark?.type === "gym") {
+  if (currentLandmark?.type === "gym" || currentLandmark?.type === "elite-four") {
     return "gym";
   }
   if (currentLandmark?.type === "town") {
@@ -645,6 +895,10 @@ function buildLocationMessage(point) {
     return `抵達 ${locationName}，這裡可以補給並招募夥伴。`;
   }
   if (terrainType === "gym") {
+    const currentLandmark = getCurrentLandmark(point);
+    if (currentLandmark?.type === "elite-four") {
+      return `你已抵達 ${locationName}，寶可夢聯盟等著你！`;
+    }
     return `你已踏進 ${locationName}，準備挑戰館主。`;
   }
   if (terrainType === "road") {
@@ -1068,25 +1322,16 @@ function renderGymActionSelection() {
 }
 
 function getMoveMultiplier(moveType, targetType) {
-  if (moveType === "electric" && targetType === "water") return 1.8;
-  if (moveType === "electric" && targetType === "ground") return 0.25;
-  if (moveType === "electric" && targetType === "grass") return 0.7;
-  if (moveType === "electric" && targetType === "electric") return 0.7;
-  if (moveType === "electric" && targetType === "rock") return 0.7;
-  if (moveType === "dragon" && targetType === "fire") return 1.1;
-  if (moveType === "dragon" && targetType === "water") return 1.1;
-  if (moveType === "dragon" && targetType === "grass") return 1.1;
-  if (moveType === "dragon" && targetType === "electric") return 1.1;
-  if (moveType === "dragon" && targetType === "rock") return 0.9;
-  return 1;
+  return typeChart[moveType]?.[targetType] ?? 1;
 }
 
-function createGymEnemy(pokemon, gymType) {
+function createGymEnemy(pokemon, fallbackType) {
   const level = pokemon.level;
   return {
     species: pokemon.species,
     level,
-    type: gymType,
+    type: pokemonTypes[pokemon.species] ?? fallbackType,
+    moves: getMovesForSpecies(pokemon.species),
     maxHp: 34 + level * 4,
     hp: 34 + level * 4,
     attack: 10 + level * 2,
@@ -1107,7 +1352,8 @@ function updateGymHud() {
   gymDragoniteHpText.textContent = `HP ${Math.max(0, Math.round(activeAlly.hp))} / ${activeAlly.maxHp}`;
 
   gymEnemyName.textContent = enemy.species;
-  gymEnemyMeta.textContent = `${gymBattleState.gym.typeLabel}系・Lv.${enemy.level}`;
+  const enemyTypeLabel = typeLabels[enemy.type] ?? gymBattleState.gym.typeLabel;
+  gymEnemyMeta.textContent = `${enemyTypeLabel}系・Lv.${enemy.level}`;
   gymEnemyHpFill.style.width = `${(enemy.hp / enemy.maxHp) * 100}%`;
   gymEnemyHpText.textContent = `HP ${Math.max(0, Math.round(enemy.hp))} / ${enemy.maxHp}`;
 }
@@ -1138,6 +1384,9 @@ function buildGymPlayerTeam(data) {
   const dragoniteMember = {
     slotType: "dragonite",
     displayName: "快龍",
+    species: "dragonite",
+    type: "dragon",
+    moves: getMovesForSpecies("dragonite"),
     level: dragonite.level,
     maxHp: dragonite.maxHp,
     hp: Math.max(1, dragonite.currentHp),
@@ -1148,6 +1397,9 @@ function buildGymPlayerTeam(data) {
     slotType: "party",
     partyIndex: index,
     displayName: `${member.species}`,
+    species: member.species,
+    type: pokemonTypes[member.species] ?? "normal",
+    moves: getMovesForSpecies(member.species),
     level: member.level,
     maxHp: member.maxHp,
     hp: Math.max(0, member.currentHp),
@@ -1191,6 +1443,10 @@ function restoreAllBattleStatus() {
 }
 
 function handleGymVictory() {
+  if (gymBattleState?.isEliteFour) {
+    handleEliteFourStageVictory();
+    return;
+  }
   const data = readGameData();
   if (!data || !gymBattleState) {
     return;
@@ -1227,6 +1483,14 @@ function nextGymEnemy() {
   gymMsg.textContent = `${gymBattleState.gym.leader} 派出了 ${gymBattleState.enemy.species}！`;
 }
 
+function updateBattleButtons(ally) {
+  const labels = document.querySelectorAll(".gym-move-label");
+  if (labels.length >= 2 && ally.moves) {
+    labels[0].textContent = ally.moves[0].name;
+    labels[1].textContent = ally.moves[1].name;
+  }
+}
+
 function performGymAction(action) {
   if (!gymBattleState) return;
   const { enemy, gym } = gymBattleState;
@@ -1243,6 +1507,10 @@ function performGymAction(action) {
   }
 
   if (action === "retreat") {
+    if (gymBattleState.isEliteFour) {
+      handleEliteFourDefeat("你選擇撤退，四天王挑戰中止。");
+      return;
+    }
     persistGymPlayerTeam(gymBattleState.playerTeam);
     finishGymBattle("你先撤退整備，準備下次再戰。", "你離開了道館，快龍仍可再次挑戰。");
     return;
@@ -1250,18 +1518,21 @@ function performGymAction(action) {
 
   let message = "";
 
-  if (action === "claw") {
-    const damage = calcBattleDamage(ally, enemy, 15, getMoveMultiplier("dragon", enemy.type));
-    enemy.hp = Math.max(0, enemy.hp - damage);
-    message = `${ally.displayName} 使出龍爪，造成 ${damage} 點傷害！`;
-  } else if (action === "thunder") {
+  if (action === "move1" || action === "move2") {
+    const moveIndex = action === "move1" ? 0 : 1;
+    const move = ally.moves[moveIndex];
     const hitRoll = randomInt(1, 100);
-    if (hitRoll <= 90) {
-      const damage = calcBattleDamage(ally, enemy, 17, getMoveMultiplier("electric", enemy.type));
+    if (hitRoll <= move.accuracy) {
+      const multiplier = getMoveMultiplier(move.type, enemy.type);
+      const damage = calcBattleDamage(ally, enemy, move.power, multiplier);
       enemy.hp = Math.max(0, enemy.hp - damage);
-      message = `${ally.displayName} 使出雷電拳，造成 ${damage} 點傷害！`;
+      let eff = "";
+      if (multiplier >= 1.5) eff = "（效果拔群！）";
+      else if (multiplier > 0 && multiplier < 1) eff = "（效果不好...）";
+      else if (multiplier === 0) eff = "（完全無效！）";
+      message = `${ally.displayName} 使出${move.name}，造成 ${damage} 點傷害！${eff}`;
     } else {
-      message = "雷電拳落空了！";
+      message = `${ally.displayName} 的${move.name}落空了！`;
     }
   } else if (action === "heal") {
     const recover = 18 + Math.round(ally.level * 0.8);
@@ -1274,6 +1545,7 @@ function performGymAction(action) {
       return;
     }
     gymBattleState.activeAllyIndex = nextAllyIndex;
+    updateBattleButtons(gymBattleState.playerTeam[nextAllyIndex]);
     message = `你換上了 ${gymBattleState.playerTeam[nextAllyIndex].displayName}！`;
   }
 
@@ -1300,18 +1572,33 @@ function performGymAction(action) {
     return;
   }
 
+  /* ── 敵方回合：使用自己的技能 ── */
   const currentAlly = gymBattleState.playerTeam[gymBattleState.activeAllyIndex];
-  const enemyPower = gym.enemyPower ?? 15;
-  const enemyMultiplier = gym.enemyMultiplier ?? 1;
-  const enemyDamage = calcBattleDamage(enemy, currentAlly, enemyPower, enemyMultiplier);
-  currentAlly.hp = Math.max(0, currentAlly.hp - enemyDamage);
+  const enemyMove = enemy.moves[randomInt(0, enemy.moves.length - 1)];
+  const allyType = currentAlly.type ?? "normal";
+  const enemyHitRoll = randomInt(1, 100);
+  if (enemyHitRoll <= enemyMove.accuracy) {
+    const enemyMult = getMoveMultiplier(enemyMove.type, allyType);
+    const enemyDamage = calcBattleDamage(enemy, currentAlly, enemyMove.power, enemyMult);
+    currentAlly.hp = Math.max(0, currentAlly.hp - enemyDamage);
+    let enemyEff = "";
+    if (enemyMult >= 1.5) enemyEff = "（效果拔群！）";
+    else if (enemyMult > 0 && enemyMult < 1) enemyEff = "（效果不好...）";
+    else if (enemyMult === 0) enemyEff = "（完全無效！）";
+    message += `\n${enemy.species} 使出${enemyMove.name}，造成 ${enemyDamage} 點傷害！${enemyEff}`;
+  } else {
+    message += `\n${enemy.species} 的${enemyMove.name}落空了！`;
+  }
   updateGymHud();
-  message += `\n${enemy.species} 反擊造成 ${enemyDamage} 點傷害！`;
 
   if (currentAlly.hp <= 0) {
     const nextAllyIndex = findNextAliveAllyIndex();
     if (nextAllyIndex === -1 || gymBattleState.playerTeam[nextAllyIndex].hp <= 0) {
       persistGymPlayerTeam(gymBattleState.playerTeam);
+      if (gymBattleState.isEliteFour) {
+        handleEliteFourDefeat(`${message}\n你的夥伴全數失去戰鬥能力，四天王挑戰失敗了。`);
+        return;
+      }
       finishGymBattle(
         `${message}\n你的夥伴全數失去戰鬥能力，這次挑戰失敗了。`,
         "挑戰失敗，先練等再回來挑戰吧。",
@@ -1319,6 +1606,7 @@ function performGymAction(action) {
       return;
     }
     gymBattleState.activeAllyIndex = nextAllyIndex;
+    updateBattleButtons(gymBattleState.playerTeam[nextAllyIndex]);
     message += `\n${currentAlly.displayName} 倒下了，你換上 ${gymBattleState.playerTeam[nextAllyIndex].displayName}！`;
   }
 
@@ -1370,10 +1658,142 @@ function startGymBattle(landmark) {
   gymTitle.textContent = `${landmark.name}・${gym.typeLabel}系道館`;
   gymStatus.textContent = `建議等級 Lv.${gym.recommendedLevel} 左右・可用夥伴 ${playerTeam.length} 隻`;
   gymMsg.textContent = `${gym.leader} 接受挑戰！對手屬性：${gym.typeLabel}系。`;
+  updateBattleButtons(playerTeam[firstAliveIndex === -1 ? 0 : firstAliveIndex]);
   setGymButtons(true);
   renderGymActionSelection();
   updateGymHud();
   setSceneVisibility("gym");
+}
+
+/* ── 四天王挑戰系統 ── */
+let eliteFourChallengeState = null;
+
+function startEliteFourChallenge(landmark) {
+  const data = readGameData();
+  if (!data) return;
+  ensureDragoniteState(data);
+  const badges = data.progress?.badges ?? 0;
+
+  if (badges < 8) {
+    setMapStatus("需要集齊 8 枚徽章才能挑戰四天王。");
+    return;
+  }
+  if (data.progress.championDefeated) {
+    setMapStatus("你已經是寶可夢聯盟冠軍了！");
+    return;
+  }
+
+  restoreAllBattleStatus();
+  eliteFourChallengeState = { stage: 0, landmark };
+  startEliteFourBattle();
+}
+
+function startEliteFourBattle() {
+  const stage = eliteFourChallengeState.stage;
+  const config = stage < 4 ? eliteFourConfigs[stage] : championConfig;
+  const landmark = eliteFourChallengeState.landmark;
+
+  const data = readGameData();
+  if (!data) return;
+  ensureDragoniteState(data);
+  ensurePartyState(data);
+  saveGameData(data);
+
+  const playerTeam = buildGymPlayerTeam(data);
+  const firstAliveIndex = playerTeam.findIndex((a) => a.hp > 0);
+
+  if (firstAliveIndex === -1) {
+    handleEliteFourDefeat("你的夥伴全數失去戰鬥能力，四天王挑戰失敗了。");
+    return;
+  }
+
+  gymBattleState = {
+    landmark,
+    gym: {
+      leader: config.member,
+      type: config.type,
+      typeLabel: config.typeLabel,
+      badgeRewardExp: config.rewardExp,
+      team: config.team,
+    },
+    isEliteFour: true,
+    enemyIndex: 0,
+    playerTeam,
+    activeAllyIndex: firstAliveIndex,
+    enemy: createGymEnemy(config.team[0], config.type),
+  };
+  gymActionIndex = 0;
+
+  gymTag.textContent = `${config.title}：${config.member}`;
+  gymTitle.textContent = stage < 4
+    ? `四天王第 ${stage + 1} 戰・${config.typeLabel}系`
+    : `冠軍戰・${config.typeLabel}隊伍`;
+  gymStatus.textContent = `建議等級 Lv.${config.recommendedLevel}・可用夥伴 ${playerTeam.filter((a) => a.hp > 0).length} 隻`;
+  gymMsg.textContent = `${config.member} 接受挑戰！`;
+  updateBattleButtons(playerTeam[firstAliveIndex]);
+  setGymButtons(true);
+  renderGymActionSelection();
+  updateGymHud();
+  setSceneVisibility("gym");
+}
+
+function handleEliteFourStageVictory() {
+  const stage = eliteFourChallengeState.stage;
+  const config = stage < 4 ? eliteFourConfigs[stage] : championConfig;
+
+  const expMessage = gainDragoniteExp(config.rewardExp);
+  persistGymPlayerTeam(gymBattleState.playerTeam);
+
+  if (stage === 4) {
+    const data = readGameData();
+    if (data) {
+      data.progress.eliteFourDefeated = true;
+      data.progress.championDefeated = true;
+      saveGameData(data);
+    }
+    restoreAllBattleStatus();
+    setGymButtons(false);
+    gymTag.textContent = "冠軍達成！";
+    gymMsg.textContent = `你擊敗了冠軍 ${config.member}！${expMessage}\n恭喜成為新的寶可夢聯盟冠軍！`;
+    gymBattleState = null;
+    eliteFourChallengeState = null;
+    setTimeout(() => {
+      setSceneVisibility("map");
+      updateMapHud();
+      setMapStatus("恭喜！你已成為寶可夢聯盟冠軍！");
+      updateEncounterPanel();
+    }, 3000);
+    return;
+  }
+
+  eliteFourChallengeState.stage += 1;
+  const nextConfig = eliteFourChallengeState.stage < 4
+    ? eliteFourConfigs[eliteFourChallengeState.stage]
+    : championConfig;
+
+  setGymButtons(false);
+  gymMsg.textContent = `擊敗了 ${config.member}！${expMessage}\n下一位對手：${nextConfig.member}...`;
+  gymBattleState = null;
+
+  setTimeout(() => {
+    startEliteFourBattle();
+  }, 2000);
+}
+
+function handleEliteFourDefeat(message) {
+  restoreAllBattleStatus();
+  setGymButtons(false);
+  gymMsg.textContent = message || "四天王挑戰失敗。";
+  gymTag.textContent = "挑戰結束";
+  gymBattleState = null;
+  eliteFourChallengeState = null;
+  setTimeout(() => {
+    setSceneVisibility("map");
+    updateMapHud();
+    setMapStatus("四天王挑戰失敗，練等後再來吧。");
+    updateEncounterPanel();
+    updateWildPokemonHighlight();
+  }, 2000);
 }
 
 async function fetchPokemonSprite(name) {
@@ -1600,6 +2020,10 @@ function advanceOpeningStory() {
 
 function inspectCurrentPosition() {
   const currentLandmark = getCurrentLandmark(playerPosition);
+  if (currentLandmark?.type === "elite-four") {
+    startEliteFourChallenge(currentLandmark);
+    return;
+  }
   if (currentLandmark?.type === "gym") {
     startGymBattle(currentLandmark);
     return;
@@ -1667,7 +2091,7 @@ document.addEventListener("keydown", (event) => {
     if (!gymBattleState) return;
 
     if (event.key === "1" || event.key === "2" || event.key === "3" || event.key === "4" || event.key === "5") {
-      const actions = ["claw", "thunder", "heal", "retreat", "switch"];
+      const actions = ["move1", "move2", "heal", "retreat", "switch"];
       gymActionIndex = Number(event.key) - 1;
       renderGymActionSelection();
       performGymAction(actions[gymActionIndex]);
