@@ -331,6 +331,12 @@ nav {
   box-shadow: inset 0 0 0 4px #d6e275;
 }
 
+.landmark-elite-four .landmark-core {
+  background: #c44;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 4px #f99, 0 0 8px rgba(204, 68, 68, 0.5);
+}
+
 .landmark-label {
   margin-top: 4px;
   font-size: 0.45rem;
