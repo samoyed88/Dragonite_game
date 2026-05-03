@@ -21,6 +21,7 @@ const locationTitle = document.getElementById("locationTitle");
 const locationMeta = document.getElementById("locationMeta");
 const mapDragoniteStatus = document.getElementById("mapDragoniteStatus");
 const mapProgressStatus = document.getElementById("mapProgressStatus");
+const mapPartyIcons = document.getElementById("mapPartyIcons");
 const encounterList = document.getElementById("encounterList");
 const encounterTitle = document.querySelector(".encounter-title");
 const encounterScene = document.getElementById("encounterScene");
@@ -662,16 +663,30 @@ function updateMapHud() {
   const nearestGym = getNearestLandmark(playerPosition, "gym");
   const dragonite = getDragoniteSnapshot();
   const badges = readGameData()?.progress?.badges ?? 0;
+  const party = getParty();
   locationTitle.textContent = getLocationName(playerPosition);
-  const partySize = getParty().length;
-  locationMeta.textContent = `座標 (${Math.round(playerPosition.x)}, ${Math.round(playerPosition.y)})・${terrainLabel(terrainType)}`;
+  locationMeta.textContent = terrainLabel(terrainType);
   if (dragonite) {
     mapDragoniteStatus.textContent =
-      `快龍 Lv.${dragonite.level}・HP ${dragonite.currentHp}/${dragonite.maxHp}・EXP ${dragonite.exp}/${expToNextLevel(dragonite.level)}`;
+      `Lv.${dragonite.level} HP ${dragonite.currentHp}/${dragonite.maxHp}`;
   } else {
-    mapDragoniteStatus.textContent = "快龍 Lv.--・HP --/--";
+    mapDragoniteStatus.textContent = "Lv.-- HP --/--";
   }
-  mapProgressStatus.textContent = `徽章 ${badges}/8・夥伴 ${partySize} 隻・已探索 ${discoveredZones.size} 區`;
+  mapProgressStatus.textContent = `🏅${badges}/8 📍${discoveredZones.size}`;
+
+  /* render party icons: dragonite leader + party members */
+  mapPartyIcons.innerHTML = "";
+  const leaderImg = document.createElement("img");
+  leaderImg.className = "party-leader-icon";
+  leaderImg.src = playerSprite.src;
+  leaderImg.alt = "快龍";
+  mapPartyIcons.appendChild(leaderImg);
+  for (const member of party) {
+    const img = document.createElement("img");
+    img.src = member.sprite;
+    img.alt = member.species;
+    mapPartyIcons.appendChild(img);
+  }
 
   if (nearestTown && nearestGym) {
     setMapStatus(
