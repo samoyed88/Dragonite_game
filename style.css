@@ -141,26 +141,64 @@ nav {
 
 .map-hud-floating {
   position: absolute;
-  left: 8px;
-  top: 8px;
-  width: min(68%, 290px);
+  left: 6px;
+  top: 6px;
+  width: auto;
+  max-width: min(72%, 300px);
   margin-bottom: 0;
   z-index: 30;
   pointer-events: none;
   box-shadow: 2px 2px 0 rgba(15, 56, 15, 0.35);
+  padding: 4px 8px;
+  opacity: 0.85;
+}
+
+.map-hud-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .map-location-title {
   margin: 0;
-  font-size: 0.65rem;
-  line-height: 1.5;
+  font-size: 0.58rem;
+  line-height: 1.4;
+  font-weight: bold;
+}
+
+.map-hud-sep {
+  margin: 0;
+  font-size: 0.44rem;
+  color: var(--gb-mid-dark);
+  line-height: 1.4;
 }
 
 .map-location-meta {
-  margin: 6px 0 0;
-  font-size: 0.5rem;
+  margin: 0;
+  font-size: 0.44rem;
   color: var(--gb-mid-dark);
-  line-height: 1.5;
+  line-height: 1.4;
+}
+
+.map-party-icons {
+  display: flex;
+  gap: 2px;
+  margin-top: 3px;
+  align-items: center;
+}
+
+.map-party-icons img {
+  width: 20px;
+  height: 20px;
+  image-rendering: pixelated;
+}
+
+.map-party-icons .party-leader-icon {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--gb-dark);
+  border-radius: 2px;
 }
 
 .map-viewport {

@@ -54,10 +54,15 @@
           <p class="story-tag">開放世界</p>
           <div id="mapViewport" class="map-viewport" aria-live="polite" aria-label="世界地圖視窗">
             <section class="map-hud map-hud-floating" aria-label="地圖資訊">
-              <p id="locationTitle" class="map-location-title">真新鎮</p>
-              <p id="locationMeta" class="map-location-meta">座標 (260, 980)・城鎮</p>
-              <p id="mapDragoniteStatus" class="map-location-meta">快龍 Lv.10・HP 122/122</p>
-              <p id="mapProgressStatus" class="map-location-meta">徽章 0/8・已探索 1 區</p>
+              <div class="map-hud-row">
+                <span id="locationTitle" class="map-location-title">真新鎮</span>
+                <span id="locationMeta" class="map-hud-sep">城鎮</span>
+              </div>
+              <div class="map-hud-row">
+                <span id="mapDragoniteStatus" class="map-location-meta">Lv.10 HP 122/122</span>
+                <span id="mapProgressStatus" class="map-location-meta">🏅0/8 📍2</span>
+              </div>
+              <div id="mapPartyIcons" class="map-party-icons"></div>
             </section>
             <div id="mapWorld" class="map-world">
               <div id="roadsLayer" class="roads-layer"></div>
